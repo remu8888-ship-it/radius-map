@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>반경 측정기</title>
+<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u&submodules=geocoder"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#03C75A;--bg:#0c0e14;--card:#161920;--bd:#222533;--red:#ff4757;--tx:#eef0f5;--mu:#5a6070}
+html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+header{height:48px;background:var(--g);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:999}
+.hl{font-size:16px;font-weight:700;color:#fff;white-space:nowrap}
+.hs{flex:1;display:flex;gap:6px;margin-left:8px}
+.hs input{flex:1;padding:6px 12px;border-radius:20px;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:12px;outline:none;min-width:0}
+.hs input::placeholder{color:rgba(255,255,255,.6)}
+.hs button{padding:6px 12px;background:#fff;color:#00a648;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+#mw{flex:1;position:relative;min-height:0}
+#map{width:100%;height:100%}
+.hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(12,14,20,.85);backdrop-filter:blur(8px);border:1px solid rgba(3,199,90,.35);border-radius:20px;padding:7px 16px;font-size:11px;color:rgba(255,255,255,.8);z-index:500;pointer-events:none;white-space:nowrap;transition:opacity .3s}
+.hint.off{opacity:0}
+.tbs{position:absolute;top:12px;right:10px;z-index:500;display:flex;flex-direction:column;gap:3px}
+.tb{padding:5px 10px;background:rgba(12,14,20,.85);backdrop-filter:blur(6px);border:1px solid var(--bd);border-radius:6px;color:var(--mu);font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tb.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:700}
+.lb{position:absolute;bottom:12px;right:10px;z-index:500;width:38px;height:38px;background:rgba(12,14,20,.88);border:1px solid var(--bd);border-radius:50%;color:var(--g);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.cb{position:absolute;bottom:12px;left:10px;z-index:500;background:rgba(12,14,20,.82);border-radius:6px;padding:5px 10px;font-family:monospace;font-size:9px;color:var(--mu);pointer-events:none}
+#panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
+.sb.hl{border-color:var(--g)}
+.sl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--mu);margin-bottom:3px}
+.sv{font-family:monospace;font-size:14px;font-weight:700;color:var(--tx);line-height:1}
+.sb.hl .sv{color:var(--g);font-size:17px}
+.sr{display:flex;flex-direction:column;gap:4px}
+.st{display:flex;justify-content:space-between;font-size:10px;color:var(--mu)}
+input[type=range]{width:100%;-webkit-appearance:none;height:4px;background:var(--bd);border-radius:4px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--g);border-radius:50%;cursor:pointer;box-shadow:0 0 0 3px rgba(3,199,90,.2)}
+.br{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.ps{display:flex;gap:4px;flex-wrap:wrap}
+.pb{padding:4px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;color:var(--mu);font-size:10px;cursor:pointer;transition:all .15s}
+.pb.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:700}
+.clr{padding:6px 12px;background:transparent;border:1px solid var(--red);border-radius:7px;color:var(--red);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.ci{font-size:9px;color:var(--mu);text-align:center;font-family:monospace}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<div class="hl">📍 반경측정기</div>
+<div class="hs">
+<input type="text" id="si" placeholder="주소·장소 검색…" onkeydown="if(event.key==='Enter')doSearch()">
+<button onclick="doSearch()">검색</button>
+</div>
+</header>
+<div id="mw">
+<div id="map"></div>
+<div class="hint" id="hint">📍 지도를 터치해 중심점을 설정하세요</div>
+<div class="tbs">
+<button class="tb on" onclick="setType('NORMAL',this)">🗺 일반</button>
+<button class="tb" onclick="setType('SATELLITE',this)">🛰 위성</button>
+<button class="tb" onclick="setType('TERRAIN',this)">🗻 지형</button>
+<button class="tb" onclick="setType('HYBRID',this)">🌐 혼합</button>
+</div>
+<button class="lb" onclick="locateMe()">◎</button>
+<div class="cb" id="cb">—</div>
+</div>
+<div id="panel">
+<div class="stats">
+<div class="sb hl"><div class="sl">반경</div><div class="sv" id="vR">—</div></div>
+<div class="sb"><div class="sl">지름</div><div class="sv" id="vD">—</div></div>
+<div class="sb"><div class="sl">면적</div><div class="sv" id="vA">—</div></div>
+</div>
+<div class="sr">
+<div class="st"><span>반경 조절</span><span id="sv">500 m</span></div>
+<input type="range" id="sl" min="100" max="50000" step="100" value="500" oninput="onSl(this.value)">
+</div>
+<div class="br">
+<div class="ps" id="ps"></div>
+<button class="clr" onclick="clearAll()">🗑 초기화</button>
+</div>
+<div class="ci" id="ci">중심점을 터치해 설정하세요</div>
+</div>
+</div>
+<script>
+const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.0756),zoom:14,mapTypeId:naver.maps.MapTypeId.NORMAL,scaleControl:false});
+let cM=null,circ=null,eM=null,rM=500;
+function setType(t,b){document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));b.classList.add('on');map.setMapTypeId(naver.maps.MapTypeId[t])}
+function dist(a,b){const R=6371000,r=x=>x*Math.PI/180,dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());return R*2*Math.atan2(Math.sqrt(Math.sin(dLa/2)**2+Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2),Math.sqrt(1-Math.sin(dLa/2)**2-Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2))}
+function eLL(c,r){return new naver.maps.LatLng(c.lat(),c.lng()+(r/(6378137*Math.cos(c.lat()*Math.PI/180)))*(180/Math.PI))}
+function place(pos){
+clearAll(false);
+cM=new naver.maps.Marker({position:pos,map,icon:{content:'<div style="width:20px;height:20px;background:#03C75A;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(3,199,90,.4);transform:translate(-10px,-10px);cursor:move"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
+circ=new naver.maps.Circle({map,center:pos,radius:rM,strokeColor:'#03C75A',strokeWeight:2,strokeStyle:'dash',strokeOpacity:.9,fillColor:'#03C75A',fillOpacity:.08});
+eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
+naver.maps.Event.addListener(cM,'drag',e=>{circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord)});
+naver.maps.Event.addListener(eM,'drag',e=>{const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(dist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c)});
+document.getElementById('hint').classList.add('off');upd(pos)}
+naver.maps.Event.addListener(map,'click',e=>place(e.coord));
+naver.maps.Event.addListener(map,'mousemove',e=>{if(!cM)document.getElementById('cb').textContent=e.coord.lat().toFixed(4)+'°N  '+e.coord.lng().toFixed(4)+'°E'});
+function upd(p){const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m',fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=p.lat().toFixed(5)+'°N, '+p.lng().toFixed(5)+'°E';document.getElementById('cb').textContent=p.lat().toFixed(4)+'°N  '+p.lng().toFixed(4)+'°E'}
+function onSl(v){rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition())}}
+[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{const b=document.createElement('button');b.className='pb';b.textContent=p.l;b.onclick=()=>{document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition())}else document.getElementById('sv').textContent=p.v>=1000?(p.v/1000)+' km':p.v+' m'};document.getElementById('ps').appendChild(b)});
+function clearAll(h=true){[cM,circ,eM].forEach(x=>x&&x.setMap(null));cM=circ=eM=null;['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('ci').textContent='중심점을 터치해 설정하세요';if(h)document.getElementById('hint').classList.remove('off')}
+function locateMe(){if(!navigator.geolocation)return alert('위치 서비스 미지원');navigator.geolocation.getCurrentPosition(p=>{const ll=new naver.maps.LatLng(p.coords.latitude,p.coords.longitude);map.setCenter(ll);map.setZoom(15);place(ll)},()=>alert('위치를 가져올 수 없습니다.'))}
+function doSearch(){const q=document.getElementById('si').value.trim();if(!q)return;naver.maps.Service.geocode({query:q},(s,r)=>{if(s===naver.maps.Service.Status.ERROR||!r.v2.addresses.length)return alert('검색 결과가 없습니다.');const a=r.v2.addresses[0],ll=new naver.maps.LatLng(a.y,a.x);map.setCenter(ll);map.setZoom(15);place(ll);document.getElementById('si').value=''})}
+</script>
+</body>
+</html>
