@@ -112,9 +112,7 @@ function updateMyDot(lat,lng,acc){
   }else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);}
   document.getElementById('cb').textContent=`내위치: ${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E\n정확도: ±${Math.round(acc)}m`;
 }
-function toggleTracking(){
-  isTracking?stopTracking():startTracking();
-}
+function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
   isTracking=true;
@@ -156,13 +154,15 @@ function clearAll(){if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=
 async function doSearch(){
   const q=document.getElementById('si').value.trim();if(!q)return;
   try{
-    let res=await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&size=1`,{headers:{'Authorization':'KakaoAK e32fcd736006dc599eaf99741a49bcdf'}});
-    let data=await res.json();
-    if(data.documents&&data.documents.length>0){const d=data.documents[0];const ll=new naver.maps.LatLng(parseFloat(d.y),parseFloat(d.x));map.setCenter(ll);map.setZoom(15);place(ll);document.getElementById('si').value='';return;}
-    res=await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&size=1`,{headers:{'Authorization':'KakaoAK e32fcd736006dc599eaf99741a49bcdf'}});
-    data=await res.json();
-    if(data.documents&&data.documents.length>0){const d=data.documents[0];const ll=new naver.maps.LatLng(parseFloat(d.y),parseFloat(d.x));map.setCenter(ll);map.setZoom(15);place(ll);document.getElementById('si').value='';return;}
-    alert('검색 결과가 없습니다.');
+    const res=await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,
+      {headers:{'Accept-Language':'ko'}}
+    );
+    const data=await res.json();
+    if(!data||!data.length){alert('검색 결과가 없습니다.');return;}
+    const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));
+    map.setCenter(ll);map.setZoom(15);place(ll);
+    document.getElementById('si').value='';
   }catch(e){alert('검색 오류: '+e.message);}
 }
 </script>
