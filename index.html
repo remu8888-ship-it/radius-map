@@ -15,12 +15,9 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .brand{display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
 .brand-all{font-family:'Jua',sans-serif;font-size:19px;color:#fff;letter-spacing:-0.5px;text-shadow:2px 2px 0px rgba(0,0,0,0.2);display:flex}
 .brand-all span{display:inline-block;animation:bounce 1.2s infinite alternate}
-.brand-all span:nth-child(1){animation-delay:.00s}
-.brand-all span:nth-child(2){animation-delay:.08s}
-.brand-all span:nth-child(3){animation-delay:.16s}
-.brand-all span:nth-child(4){animation-delay:.24s}
-.brand-all span:nth-child(5){animation-delay:.32s}
-.brand-all span:nth-child(6){animation-delay:.40s}
+.brand-all span:nth-child(1){animation-delay:.00s}.brand-all span:nth-child(2){animation-delay:.08s}
+.brand-all span:nth-child(3){animation-delay:.16s}.brand-all span:nth-child(4){animation-delay:.24s}
+.brand-all span:nth-child(5){animation-delay:.32s}.brand-all span:nth-child(6){animation-delay:.40s}
 .brand-all span:nth-child(7){animation-delay:.48s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
 .hs{flex:1;display:flex;gap:6px;margin-left:8px}
@@ -42,23 +39,21 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
 .ib.on-purple{background:#a855f7;color:#fff;border-color:#a855f7}
 .ib.on-blue{background:#2563eb;color:#fff;border-color:#2563eb}
-.ib.on-red{background:#ff4757;color:#fff;border-color:#ff4757}
-.vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:230px;display:none;backdrop-filter:blur(10px)}
+.vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:235px;display:none;backdrop-filter:blur(10px)}
 .vote-popup.show{display:block}
 .vp-type{font-size:9px;color:#2563eb;font-weight:700;letter-spacing:1px;margin-bottom:4px}
 .vp-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
-.vp-addr{font-size:10px;color:var(--mu);line-height:1.6;white-space:pre-line}
+.vp-bld{font-size:10px;color:#a0aec0;margin-bottom:2px}
+.vp-addr{font-size:10px;color:var(--mu);line-height:1.5}
 .vp-time{font-size:10px;color:var(--g);margin-top:5px;font-weight:700}
 .vp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--mu);font-size:14px;cursor:pointer}
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
-.sb.hl{border-color:var(--g)}
-.sb.hl.locked-stat{border-color:var(--gold)}
+.sb.hl{border-color:var(--g)}.sb.hl.locked-stat{border-color:var(--gold)}
 .sl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--mu);margin-bottom:3px}
 .sv{font-family:monospace;font-size:14px;font-weight:700;color:var(--tx);line-height:1}
-.sb.hl .sv{color:var(--g);font-size:17px}
-.sb.hl.locked-stat .sv{color:var(--gold)}
+.sb.hl .sv{color:var(--g);font-size:17px}.sb.hl.locked-stat .sv{color:var(--gold)}
 .sr{display:flex;flex-direction:column;gap:4px}
 .st{display:flex;justify-content:space-between;font-size:10px;color:var(--mu)}
 input[type=range]{width:100%;-webkit-appearance:none;height:4px;background:var(--bd);border-radius:4px;outline:none}
@@ -115,18 +110,18 @@ input[type=range]:disabled{opacity:.4}
       </svg>
     </div>
     <button class="ib on-purple" id="dongBtn" onclick="toggleDong()">🏘</button>
-    <button class="ib" id="preBtn" onclick="toggleVote('pre')">🗳</button>
-    <button class="ib" id="dayBtn" onclick="toggleVote('day')">📍</button>
+    <button class="ib" id="preBtn" onclick="togglePre()">🗳</button>
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
   </div>
   <div class="vote-popup" id="votePopup">
     <button class="vp-close" onclick="document.getElementById('votePopup').classList.remove('show')">✕</button>
-    <div class="vp-type" id="vpType">🗳 투표소</div>
+    <div class="vp-type">🗳 사전투표소 · 연제구</div>
     <div class="vp-name" id="vpName"></div>
+    <div class="vp-bld" id="vpBld"></div>
     <div class="vp-addr" id="vpAddr"></div>
-    <div class="vp-time" id="vpTime"></div>
+    <div class="vp-time">5.29(금)~5.30(토) 06:00~18:00</div>
   </div>
 </div>
 
@@ -149,17 +144,103 @@ input[type=range]:disabled{opacity:.4}
 </div>
 
 <script>
-const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.0756),zoom:14,mapTypeId:naver.maps.MapTypeId.NORMAL,scaleControl:false});
+// ── 지도 초기화 (회전 가능하도록 tilt/rotate 허용) ─────────
+const map=new naver.maps.Map('map',{
+  center:new naver.maps.LatLng(35.1796,129.0756),
+  zoom:14,
+  mapTypeId:naver.maps.MapTypeId.NORMAL,
+  scaleControl:false,
+  tilt:0,
+  bearing:0,
+  tilting:true,   // 기울기 허용
+  rotating:true   // 회전 허용 (두 손가락 회전)
+});
+
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
-let dongPolygons=[],dongLabels=[],showDong=true;
-let preMarkers=[],dayMarkers=[],showPre=false,showDay=false;
+let dongPolygons=[],showDong=true;
+let preMarkers=[],showPre=false,preLoaded=false;
 
-const API_KEY='2f35c409521eb7f8c33957cc8940eaff7293e97661e67972d65ca487f1562784';
-const SG_ID='20260603';
+// ── 사전투표소 데이터 (엑셀 소재지 기준) ─────────────────
+const PRE_STATIONS=[
+  {name:'거제제1동사전투표소', bld:'거제1동행정복지센터 3층 다목적실',   addr:'부산광역시 연제구 법원북로 88'},
+  {name:'거제제2동사전투표소', bld:'거제2동행정복지센터 3층 다목적홀',   addr:'부산광역시 연제구 아시아드대로22번길 19'},
+  {name:'거제제3동사전투표소', bld:'거제3동행정복지센터 1층 평생학습실', addr:'부산광역시 연제구 거제대로 180'},
+  {name:'거제제4동사전투표소', bld:'거제4동행정복지센터 4층 다목적강당', addr:'부산광역시 연제구 화지로52번길 33'},
+  {name:'연산제1동사전투표소', bld:'연산1동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 연동로8번길 66'},
+  {name:'연산제2동사전투표소', bld:'연제구청 2층 대회의실',              addr:'부산광역시 연제구 연제로 2'},
+  {name:'연산제3동사전투표소', bld:'연산3동행정복지센터 4층 대회의실',   addr:'부산광역시 연제구 연수로208번길 16'},
+  {name:'연산제4동사전투표소', bld:'연산로터리새마을금고 4층 대강당',    addr:'부산광역시 연제구 쌍미천로141번길 22'},
+  {name:'연산제5동사전투표소', bld:'연산5동행정복지센터 2층 평생학습실', addr:'부산광역시 연제구 거제천로124번길 15'},
+  {name:'연산제6동사전투표소', bld:'연산6동행정복지센터 4층 프로그램실', addr:'부산광역시 연제구 쌍미천로52번길 2'},
+  {name:'연산제8동사전투표소', bld:'연산8동행정복지센터 3층 프로그램실', addr:'부산광역시 연제구 과정로 262 302호'},
+  {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 과정로164번길 38'},
+];
+
+// ── 주소 → 좌표 변환 ─────────────────────────────────────
+async function geocode(addr){
+  // 주소에서 괄호 내용 제거 후 검색
+  const clean=addr.replace(/\(.*?\)/g,'').trim();
+  const urls=[
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean)}&format=json&limit=1&countrycodes=kr`,
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean.replace(/\s+/g,' '))}&format=json&limit=3&countrycodes=kr`
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{headers:{'Accept-Language':'ko','User-Agent':'YeongjinApp'}});
+      const d=await r.json();
+      if(d&&d.length){
+        // 부산 연제구 근방(35.15~35.22, 129.05~129.11) 필터
+        const match=d.find(x=>{
+          const lt=parseFloat(x.lat),ln=parseFloat(x.lon);
+          return lt>35.15&&lt<35.22&&ln>129.05&&ln<129.11;
+        })||d[0];
+        return{lat:parseFloat(match.lat),lng:parseFloat(match.lon)};
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,200));
+  }
+  return null;
+}
+
+// ── 사전투표소 마커 로드 ──────────────────────────────────
+async function loadPreMarkers(){
+  const btn=document.getElementById('preBtn');
+  btn.textContent='⏳';
+  for(const s of PRE_STATIONS){
+    const coord=await geocode(s.addr);
+    await new Promise(r=>setTimeout(r,150));
+    if(!coord){console.warn('좌표 없음:',s.addr);continue;}
+    const m=new naver.maps.Marker({
+      position:new naver.maps.LatLng(coord.lat,coord.lng),
+      map:null,
+      icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-16px,-16px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
+      zIndex:30
+    });
+    naver.maps.Event.addListener(m,'click',()=>{
+      document.getElementById('vpName').textContent=s.name;
+      document.getElementById('vpBld').textContent=s.bld;
+      document.getElementById('vpAddr').textContent=s.addr;
+      document.getElementById('votePopup').classList.add('show');
+    });
+    preMarkers.push(m);
+  }
+  preLoaded=true;
+  btn.textContent='🗳';
+  preMarkers.forEach(m=>m.setMap(map));
+  showPre=true;
+  btn.classList.add('on-blue');
+}
+
+function togglePre(){
+  if(!preLoaded){loadPreMarkers();return;}
+  showPre=!showPre;
+  preMarkers.forEach(m=>m.setMap(showPre?map:null));
+  document.getElementById('preBtn').classList.toggle('on-blue',showPre);
+}
+
+// ── 연제구 행정동 경계 (라벨 제거) ───────────────────────
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
-
-// ── 연제구 행정동 경계 ────────────────────────────────────
 async function drawDong(){
   try{
     const res=await fetch('https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/hangjeongdong_%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson');
@@ -170,8 +251,6 @@ async function drawDong(){
              (p.adm_nm&&p.adm_nm.includes('연제구'))||(p.SIG_KOR_NM&&p.SIG_KOR_NM.includes('연제구'));
     });
     yeonje.forEach((f,i)=>{
-      const p=f.properties;
-      const name=(p.adm_nm||p.EMD_NM||p.HJD_NM||p.name||'').replace(/부산광역시\s*연제구\s*/,'');
       const color=DONG_COLORS[i%DONG_COLORS.length];
       const arr=f.geometry.type==='MultiPolygon'?f.geometry.coordinates.map(p=>p[0]):[f.geometry.coordinates[0]];
       arr.forEach(ca=>{
@@ -180,146 +259,16 @@ async function drawDong(){
           strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12
         }));
       });
-      const fc=arr[0].map(c=>new naver.maps.LatLng(c[1],c[0]));
-      const ct=fc.reduce((a,c)=>({lat:a.lat+c.lat()/fc.length,lng:a.lng+c.lng()/fc.length}),{lat:0,lng:0});
-      dongLabels.push(new naver.maps.Marker({
-        position:new naver.maps.LatLng(ct.lat,ct.lng),map,
-        icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},
-        zIndex:5
-      }));
+      // ← 라벨(dongLabels) 완전 제거
     });
   }catch(e){console.error('행정동 로드 실패:',e);}
 }
 function toggleDong(){
   showDong=!showDong;
   dongPolygons.forEach(p=>p.setMap(showDong?map:null));
-  dongLabels.forEach(l=>l.setMap(showDong?map:null));
   document.getElementById('dongBtn').classList.toggle('on-purple',showDong);
 }
 drawDong();
-
-// ── 투표소 API ────────────────────────────────────────────
-async function fetchVoteStations(type){
-  const op=type==='pre'
-    ?'getPrePolplcOtlnmapTrnsportInfoInqire'
-    :'getPolplcOtlnmapTrnsportInfoInqire';
-  const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
-
-  const proxies=[
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
-    `https://thingproxy.freeboard.io/fetch/${target}`
-  ];
-
-  for(const proxy of proxies){
-    try{
-      console.log('시도:', proxy.split('?')[0]);
-      const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
-      if(!res.ok)continue;
-      const text=await res.text();
-      let data;
-      try{data=JSON.parse(text);}
-      catch{
-        try{data=JSON.parse(JSON.parse(text).contents);}
-        catch{continue;}
-      }
-      const body=data?.response?.body;
-      if(!body)continue;
-      const totalCount=parseInt(body.totalCount||0);
-      console.log('totalCount:',totalCount);
-      if(!totalCount||!body.items?.item)return[];
-      const list=body.items.item;
-      return Array.isArray(list)?list:[list];
-    }catch(e){console.warn('실패:',e.message);}
-  }
-  return null; // null = 프록시 전체 실패
-}
-
-async function geocode(addr){
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
-    const d=await r.json();
-    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
-  }catch(e){}
-  return null;
-}
-
-function makeVoteMarker(item,type){
-  const lat=parseFloat(item.lat||item.wgsLat||item.latitude||0);
-  const lng=parseFloat(item.lng||item.wgsLng||item.longitude||0);
-  if(!lat||!lng)return null;
-  const isPre=type==='pre';
-  const color=isPre?'#2563eb':'#ff4757';
-  const icon=isPre?'🗳':'📍';
-  const m=new naver.maps.Marker({
-    position:new naver.maps.LatLng(lat,lng),map,
-    icon:{content:`<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">${icon}</div>`,anchor:new naver.maps.Point(0,0)},
-    zIndex:30
-  });
-  naver.maps.Event.addListener(m,'click',()=>{
-    document.getElementById('vpType').textContent=isPre?'🗳 사전투표소':'📍 선거일투표소';
-    document.getElementById('vpName').textContent=item.prepolplcNm||item.polplcNm||item.polplcSNm||'투표소';
-    document.getElementById('vpAddr').textContent=item.dtlAddr||item.addr||item.abadAddr||'';
-    document.getElementById('vpTime').textContent=isPre?'5.29(금)~5.30(토) 06:00~18:00':'6.3(수) 06:00~20:00';
-    document.getElementById('votePopup').classList.add('show');
-  });
-  return m;
-}
-
-async function toggleVote(type){
-  const isPre=type==='pre';
-  const btn=document.getElementById(isPre?'preBtn':'dayBtn');
-  const markers=isPre?preMarkers:dayMarkers;
-  const showing=isPre?showPre:showDay;
-
-  // 토글 끄기
-  if(showing){
-    markers.forEach(m=>m.setMap(null));
-    if(isPre){showPre=false;preMarkers=[];}
-    else{showDay=false;dayMarkers=[];}
-    btn.classList.remove('on-blue','on-red');
-    return;
-  }
-
-  btn.textContent='⏳';
-  const items=await fetchVoteStations(type);
-
-  if(items===null){
-    // 프록시 전체 실패
-    alert('네트워크 오류로 투표소를 불러올 수 없습니다.\n잠시 후 다시 시도해주세요.');
-    btn.textContent=isPre?'🗳':'📍';
-    return;
-  }
-
-  if(!items.length){
-    // API 성공했지만 데이터 없음
-    alert('선관위가 아직 연제구 투표소 데이터를\n등록하지 않았습니다.\n선거일에 가까워지면 자동으로 표시됩니다.');
-    btn.textContent=isPre?'🗳':'📍';
-    return;
-  }
-
-  // 좌표 없는 항목은 지오코딩
-  const newMarkers=[];
-  for(const item of items){
-    let lat=parseFloat(item.lat||item.wgsLat||0);
-    let lng=parseFloat(item.lng||item.wgsLng||0);
-    if(!lat||!lng){
-      const addr=item.dtlAddr||item.addr||'';
-      if(addr){
-        const c=await geocode(addr);
-        if(c){item.lat=c.lat;item.lng=c.lng;}
-      }
-    }
-    const m=makeVoteMarker(item,type);
-    if(m)newMarkers.push(m);
-  }
-
-  if(isPre){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
-  else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
-  btn.textContent=isPre?'🗳':'📍';
-
-  if(!newMarkers.length)alert('투표소 좌표를 확인할 수 없습니다.');
-}
 
 // ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
@@ -355,14 +304,8 @@ function updateMyDot(lat,lng,acc,heading){
   const pos=new naver.maps.LatLng(lat,lng);
   const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
   const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
-  if(!myDot){
-    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
-    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
-    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
-  }else{
-    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
-    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
-  }
+  if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});}
+  else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
@@ -384,10 +327,8 @@ function locateOnce(){
 function upd(p){
   const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
   const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
-  document.getElementById('vR').textContent=f(rM);
-  document.getElementById('vD').textContent=f(rM*2);
-  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
-  document.getElementById('sv').textContent=f(rM);
+  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);
+  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);
   document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
@@ -404,15 +345,39 @@ function clearAll(){
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
+
+// ── 검색 (오류 허용: 공백 정리 + 다중 시도) ─────────────
 async function doSearch(){
-  const q=document.getElementById('si').value.trim();if(!q)return;
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
-    const d=await r.json();
-    if(!d||!d.length){alert('검색 결과가 없습니다.');return;}
-    const ll=new naver.maps.LatLng(parseFloat(d[0].lat),parseFloat(d[0].lon));
-    map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';
-  }catch(e){alert('검색 오류: '+e.message);}
+  const raw=document.getElementById('si').value.trim();
+  if(!raw)return;
+  // 연속 공백 정리, 특수문자 제거
+  const q=raw.replace(/\s+/g,' ').replace(/[^\w\s가-힣ㄱ-ㅎ\-]/g,'');
+  const queries=[
+    q,
+    q+' 부산',
+    q+' 연제구',
+    raw // 원본도 시도
+  ];
+  for(const query of queries){
+    try{
+      const r=await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,
+        {headers:{'Accept-Language':'ko'}}
+      );
+      const d=await r.json();
+      if(d&&d.length){
+        // 부산 우선
+        const hit=d.find(x=>x.display_name&&x.display_name.includes('부산'))||d[0];
+        const ll=new naver.maps.LatLng(parseFloat(hit.lat),parseFloat(hit.lon));
+        map.setCenter(ll);map.setZoom(16);
+        if(!isLocked)place(ll);
+        document.getElementById('si').value='';
+        return;
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,100));
+  }
+  alert('검색 결과가 없습니다.\n주소나 장소명을 다시 확인해주세요.');
 }
 startCompass();
 </script>
