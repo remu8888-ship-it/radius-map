@@ -42,12 +42,12 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
 .ib.on-purple{background:#a855f7;color:#fff;border-color:#a855f7}
 .ib.on-blue{background:#2563eb;color:#fff;border-color:#2563eb}
-.ib.on-red{background:#ff4757;color:#fff;border-color:#ff4757}
-.vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:220px;display:none;backdrop-filter:blur(10px)}
+.vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:230px;display:none;backdrop-filter:blur(10px)}
 .vote-popup.show{display:block}
 .vp-type{font-size:9px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 .vp-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
-.vp-addr{font-size:10px;color:var(--mu);line-height:1.5}
+.vp-addr{font-size:10px;color:var(--mu);line-height:1.6}
+.vp-time{font-size:10px;color:var(--g);margin-top:4px;font-weight:700}
 .vp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--mu);font-size:14px;cursor:pointer}
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
@@ -114,17 +114,17 @@ input[type=range]:disabled{opacity:.4}
       </svg>
     </div>
     <button class="ib on-purple" id="dongBtn" onclick="toggleDong()">🏘</button>
-    <button class="ib" id="preBtn" onclick="toggleVote('pre')">🗳</button>
-    <button class="ib" id="dayBtn" onclick="toggleVote('day')">📍</button>
+    <button class="ib" id="preBtn" onclick="togglePre()">🗳</button>
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
   </div>
   <div class="vote-popup" id="votePopup">
     <button class="vp-close" onclick="document.getElementById('votePopup').classList.remove('show')">✕</button>
-    <div class="vp-type" id="vpType"></div>
+    <div class="vp-type">🗳 사전투표소 · 연제구</div>
     <div class="vp-name" id="vpName"></div>
     <div class="vp-addr" id="vpAddr"></div>
+    <div class="vp-time">5.29(금)~5.30(토) 06:00~18:00</div>
   </div>
 </div>
 
@@ -151,13 +151,49 @@ const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.075
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],dongLabels=[],showDong=true;
-let preMarkers=[],dayMarkers=[],showPre=false,showDay=false;
+let preMarkers=[],showPre=false;
 
-const API_KEY='2f35c409521eb7f8c33957cc8940eaff7293e97661e67972d65ca487f1562784';
-const SG_ID='20260603';
-const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
+// ── 연제구 사전투표소 (공식 확정 데이터) ──────────────────
+const PRE_STATIONS=[
+  {name:'거제제1동 사전투표소',addr:'부산광역시 연제구 법원북로 88',sub:'거제1동행정복지센터 3층 다목적실',lat:35.1889,lng:129.0705},
+  {name:'거제제2동 사전투표소',addr:'부산광역시 연제구 아시아드대로22번길 19',sub:'거제2동행정복지센터 3층 다목적홀',lat:35.1872,lng:129.0768},
+  {name:'거제제3동 사전투표소',addr:'부산광역시 연제구 거제대로 180',sub:'거제3동행정복지센터 1층 평생학습실',lat:35.1820,lng:129.0712},
+  {name:'거제제4동 사전투표소',addr:'부산광역시 연제구 화지로52번길 33',sub:'거제4동행정복지센터 4층 다목적강당',lat:35.1805,lng:129.0768},
+  {name:'연산제1동 사전투표소',addr:'부산광역시 연제구 연동로8번길 66',sub:'연산1동행정복지센터 3층 대회의실',lat:35.1872,lng:129.0832},
+  {name:'연산제2동 사전투표소',addr:'부산광역시 연제구 연제로 2',sub:'연제구청 2층 대회의실',lat:35.1796,lng:129.0810},
+  {name:'연산제3동 사전투표소',addr:'부산광역시 연제구 연수로208번길 16',sub:'연산3동행정복지센터 4층 대회의실',lat:35.1838,lng:129.0868},
+  {name:'연산제4동 사전투표소',addr:'부산광역시 연제구 쌍미천로141번길 22',sub:'연산로터리새마을금고 4층 대강당',lat:35.1855,lng:129.0892},
+  {name:'연산제5동 사전투표소',addr:'부산광역시 연제구 거제천로124번길 15',sub:'연산5동행정복지센터 2층 평생학습실',lat:35.1758,lng:129.0745},
+  {name:'연산제6동 사전투표소',addr:'부산광역시 연제구 쌍미천로52번길 2',sub:'연산6동행정복지센터 4층 프로그램실',lat:35.1778,lng:129.0862},
+  {name:'연산제8동 사전투표소',addr:'부산광역시 연제구 과정로 262 302호',sub:'연산8동행정복지센터 3층 프로그램실',lat:35.1745,lng:129.0895},
+  {name:'연산제9동 사전투표소',addr:'부산광역시 연제구 과정로164번길 38',sub:'연산9동행정복지센터 3층 대회의실',lat:35.1695,lng:129.0800},
+];
+
+// ── 사전투표소 마커 ────────────────────────────────────────
+function drawPreMarkers(){
+  PRE_STATIONS.forEach(s=>{
+    const m=new naver.maps.Marker({
+      position:new naver.maps.LatLng(s.lat,s.lng),map,
+      icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
+      zIndex:30
+    });
+    naver.maps.Event.addListener(m,'click',()=>{
+      document.getElementById('vpName').textContent=s.name;
+      document.getElementById('vpAddr').textContent=s.addr+'\n'+s.sub;
+      document.getElementById('votePopup').classList.add('show');
+    });
+    preMarkers.push(m);
+  });
+}
+
+function togglePre(){
+  showPre=!showPre;
+  preMarkers.forEach(m=>m.setMap(showPre?map:null));
+  document.getElementById('preBtn').classList.toggle('on-blue',showPre);
+}
 
 // ── 연제구 행정동 경계 ────────────────────────────────────
+const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 async function drawDong(){
   try{
     const res=await fetch('https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/hangjeongdong_%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson');
@@ -171,8 +207,7 @@ async function drawDong(){
       const p=f.properties;
       const name=(p.adm_nm||p.EMD_NM||p.HJD_NM||p.name||'').replace(/부산광역시\s*연제구\s*/,'');
       const color=DONG_COLORS[i%DONG_COLORS.length];
-      const geom=f.geometry;
-      const arr=geom.type==='MultiPolygon'?geom.coordinates.map(p=>p[0]):[geom.coordinates[0]];
+      const arr=f.geometry.type==='MultiPolygon'?f.geometry.coordinates.map(p=>p[0]):[f.geometry.coordinates[0]];
       arr.forEach(ca=>{
         dongPolygons.push(new naver.maps.Polygon({map,paths:[ca.map(c=>new naver.maps.LatLng(c[1],c[0]))],strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12}));
       });
@@ -189,105 +224,7 @@ function toggleDong(){
   document.getElementById('dongBtn').classList.toggle('on-purple',showDong);
 }
 drawDong();
-
-// ── 주소 → 좌표 ───────────────────────────────────────────
-async function geocode(addr){
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
-    const d=await r.json();
-    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
-  }catch(e){}
-  return null;
-}
-
-// ── 투표소 API (무료 프록시 3개 순서대로) ─────────────────
-async function fetchVoteStations(type){
-  const op=type==='pre'?'getPrePolplcOtlnmapTrnsportInfoInqire':'getPolplcOtlnmapTrnsportInfoInqire';
-  const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
-
-  const proxies=[
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
-    `https://thingproxy.freeboard.io/fetch/${target}`
-  ];
-
-  for(const proxy of proxies){
-    try{
-      console.log('프록시 시도:', proxy.split('?')[0]);
-      const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
-      if(!res.ok){console.warn('HTTP 오류:',res.status);continue;}
-      const text=await res.text();
-      let data;
-      try{data=JSON.parse(text);}catch(e){
-        // allorigins는 contents 필드에 감쌀 수 있음
-        try{const w=JSON.parse(text);data=JSON.parse(w.contents);}catch(e2){console.warn('JSON 파싱 실패');continue;}
-      }
-      const body=data?.response?.body;
-      if(!body){console.warn('body 없음');continue;}
-      const items=body?.items?.item;
-      if(!items){
-        console.log('항목 없음, totalCount:',body?.totalCount);
-        return[];
-      }
-      const list=Array.isArray(items)?items:[items];
-      // 좌표 없으면 주소로 지오코딩
-      for(const item of list){
-        const lat=parseFloat(item.lat||item.wgsLat||0);
-        const lng=parseFloat(item.lng||item.wgsLng||0);
-        if(!lat||!lng){
-          const addr=item.dtlAddr||item.addr||item.abadAddr||'';
-          if(addr){const c=await geocode(addr);if(c){item.lat=c.lat;item.lng=c.lng;}}
-        }
-      }
-      return list;
-    }catch(e){console.warn('프록시 실패:',e.message);}
-  }
-  return[];
-}
-
-function makeVoteMarker(item,type){
-  const lat=parseFloat(item.lat||item.wgsLat||0);
-  const lng=parseFloat(item.lng||item.wgsLng||0);
-  if(!lat||!lng)return null;
-  const isPre=type==='pre';
-  const color=isPre?'#2563eb':'#ff4757';
-  const icon=isPre?'🗳':'📍';
-  const m=new naver.maps.Marker({
-    position:new naver.maps.LatLng(lat,lng),map,
-    icon:{content:`<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);transform:translate(-14px,-14px);cursor:pointer;">${icon}</div>`,anchor:new naver.maps.Point(0,0)},
-    zIndex:30
-  });
-  naver.maps.Event.addListener(m,'click',()=>{
-    document.getElementById('vpType').textContent=isPre?'🗳 사전투표소':'📍 선거일투표소';
-    document.getElementById('vpName').textContent=item.polplcNm||item.prepolplcNm||item.polplcSNm||'투표소';
-    document.getElementById('vpAddr').textContent=item.dtlAddr||item.addr||item.abadAddr||'주소 정보 없음';
-    document.getElementById('votePopup').classList.add('show');
-  });
-  return m;
-}
-
-async function toggleVote(type){
-  const btn=document.getElementById(type==='pre'?'preBtn':'dayBtn');
-  const showing=type==='pre'?showPre:showDay;
-  if(showing){
-    (type==='pre'?preMarkers:dayMarkers).forEach(m=>m.setMap(null));
-    if(type==='pre'){showPre=false;preMarkers=[];}else{showDay=false;dayMarkers=[];}
-    btn.classList.remove('on-blue','on-red');
-    return;
-  }
-  btn.textContent='⏳';
-  const items=await fetchVoteStations(type);
-  if(!items.length){
-    alert('투표소 데이터를 불러올 수 없습니다.\n선관위가 연제구 데이터를 아직 미등록했을 수 있습니다.');
-    btn.textContent=type==='pre'?'🗳':'📍';
-    return;
-  }
-  const newMarkers=items.map(i=>makeVoteMarker(i,type)).filter(Boolean);
-  if(type==='pre'){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
-  else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
-  btn.textContent=type==='pre'?'🗳':'📍';
-  if(!newMarkers.length)alert('연제구 투표소 좌표를 찾을 수 없습니다.');
-}
+drawPreMarkers();
 
 // ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
