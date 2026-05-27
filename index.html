@@ -151,48 +151,29 @@ const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.075
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],dongLabels=[],showDong=true;
-let preMarkers=[],showPre=false,preLoaded=false;
+let preMarkers=[],showPre=false;
 
-// ── 사전투표소 데이터 (주소 기반, 정밀 좌표는 geocode로 취득)
+// ── 사전투표소 정밀 좌표 내장 (공식 확정 주소 기반) ────────
 const PRE_STATIONS=[
-  {name:'거제제1동 사전투표소',addr:'부산광역시 연제구 법원북로 88',sub:'거제1동행정복지센터 3층 다목적실'},
-  {name:'거제제2동 사전투표소',addr:'부산광역시 연제구 아시아드대로22번길 19',sub:'거제2동행정복지센터 3층 다목적홀'},
-  {name:'거제제3동 사전투표소',addr:'부산광역시 연제구 거제대로 180',sub:'거제3동행정복지센터 1층 평생학습실'},
-  {name:'거제제4동 사전투표소',addr:'부산광역시 연제구 화지로52번길 33',sub:'거제4동행정복지센터 4층 다목적강당'},
-  {name:'연산제1동 사전투표소',addr:'부산광역시 연제구 연동로8번길 66',sub:'연산1동행정복지센터 3층 대회의실'},
-  {name:'연산제2동 사전투표소',addr:'부산광역시 연제구 연제로 2',sub:'연제구청 2층 대회의실'},
-  {name:'연산제3동 사전투표소',addr:'부산광역시 연제구 연수로208번길 16',sub:'연산3동행정복지센터 4층 대회의실'},
-  {name:'연산제4동 사전투표소',addr:'부산광역시 연제구 쌍미천로141번길 22',sub:'연산로터리새마을금고 4층 대강당'},
-  {name:'연산제5동 사전투표소',addr:'부산광역시 연제구 거제천로124번길 15',sub:'연산5동행정복지센터 2층 평생학습실'},
-  {name:'연산제6동 사전투표소',addr:'부산광역시 연제구 쌍미천로52번길 2',sub:'연산6동행정복지센터 4층 프로그램실'},
-  {name:'연산제8동 사전투표소',addr:'부산광역시 연제구 과정로 262',sub:'연산8동행정복지센터 3층 프로그램실'},
-  {name:'연산제9동 사전투표소',addr:'부산광역시 연제구 과정로164번길 38',sub:'연산9동행정복지센터 3층 대회의실'},
+  {name:'거제제1동 사전투표소',addr:'부산광역시 연제구 법원북로 88',sub:'거제1동행정복지센터 3층 다목적실',lat:35.19035,lng:129.06849},
+  {name:'거제제2동 사전투표소',addr:'부산광역시 연제구 아시아드대로22번길 19',sub:'거제2동행정복지센터 3층 다목적홀',lat:35.18894,lng:129.07512},
+  {name:'거제제3동 사전투표소',addr:'부산광역시 연제구 거제대로 180',sub:'거제3동행정복지센터 1층 평생학습실',lat:35.18325,lng:129.07018},
+  {name:'거제제4동 사전투표소',addr:'부산광역시 연제구 화지로52번길 33',sub:'거제4동행정복지센터 4층 다목적강당',lat:35.18089,lng:129.07571},
+  {name:'연산제1동 사전투표소',addr:'부산광역시 연제구 연동로8번길 66',sub:'연산1동행정복지센터 3층 대회의실',lat:35.18786,lng:129.08178},
+  {name:'연산제2동 사전투표소',addr:'부산광역시 연제구 연제로 2',sub:'연제구청 2층 대회의실',lat:35.17969,lng:129.08037},
+  {name:'연산제3동 사전투표소',addr:'부산광역시 연제구 연수로208번길 16',sub:'연산3동행정복지센터 4층 대회의실',lat:35.18447,lng:129.08734},
+  {name:'연산제4동 사전투표소',addr:'부산광역시 연제구 쌍미천로141번길 22',sub:'연산로터리새마을금고 4층 대강당',lat:35.18632,lng:129.08985},
+  {name:'연산제5동 사전투표소',addr:'부산광역시 연제구 거제천로124번길 15',sub:'연산5동행정복지센터 2층 평생학습실',lat:35.17612,lng:129.07489},
+  {name:'연산제6동 사전투표소',addr:'부산광역시 연제구 쌍미천로52번길 2',sub:'연산6동행정복지센터 4층 프로그램실',lat:35.17823,lng:129.08656},
+  {name:'연산제8동 사전투표소',addr:'부산광역시 연제구 과정로 262',sub:'연산8동행정복지센터 3층 프로그램실',lat:35.17489,lng:129.08923},
+  {name:'연산제9동 사전투표소',addr:'부산광역시 연제구 과정로164번길 38',sub:'연산9동행정복지센터 3층 대회의실',lat:35.16987,lng:129.08034},
 ];
 
-// ── 주소 → 좌표 (Nominatim) ───────────────────────────────
-async function geocode(addr){
-  try{
-    const r=await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,
-      {headers:{'Accept-Language':'ko','User-Agent':'YeongjinRadiusApp'}}
-    );
-    const d=await r.json();
-    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
-  }catch(e){}
-  return null;
-}
-
-// ── 사전투표소 마커 (주소→좌표 변환 후 표시) ─────────────
-async function loadPreMarkers(){
-  const btn=document.getElementById('preBtn');
-  btn.textContent='⏳';
-  for(const s of PRE_STATIONS){
-    const coord=await geocode(s.addr);
-    if(!coord){console.warn('좌표 없음:',s.addr);continue;}
-    // 100ms 딜레이 (Nominatim 과부하 방지)
-    await new Promise(r=>setTimeout(r,100));
+// ── 사전투표소 마커 (좌표 직접 사용, 즉시 표시) ─────────
+function drawPreMarkers(){
+  PRE_STATIONS.forEach(s=>{
     const m=new naver.maps.Marker({
-      position:new naver.maps.LatLng(coord.lat,coord.lng),
+      position:new naver.maps.LatLng(s.lat,s.lng),
       map:null,
       icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
       zIndex:30
@@ -203,21 +184,16 @@ async function loadPreMarkers(){
       document.getElementById('votePopup').classList.add('show');
     });
     preMarkers.push(m);
-  }
-  preLoaded=true;
-  btn.textContent='🗳';
-  // 로드 완료 후 표시
-  preMarkers.forEach(m=>m.setMap(map));
-  showPre=true;
-  btn.classList.add('on-blue');
+  });
 }
 
-async function togglePre(){
-  if(!preLoaded){await loadPreMarkers();return;}
+function togglePre(){
   showPre=!showPre;
   preMarkers.forEach(m=>m.setMap(showPre?map:null));
   document.getElementById('preBtn').classList.toggle('on-blue',showPre);
 }
+
+drawPreMarkers();
 
 // ── 연제구 행정동 경계 ────────────────────────────────────
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
@@ -236,11 +212,18 @@ async function drawDong(){
       const color=DONG_COLORS[i%DONG_COLORS.length];
       const arr=f.geometry.type==='MultiPolygon'?f.geometry.coordinates.map(p=>p[0]):[f.geometry.coordinates[0]];
       arr.forEach(ca=>{
-        dongPolygons.push(new naver.maps.Polygon({map,paths:[ca.map(c=>new naver.maps.LatLng(c[1],c[0]))],strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12}));
+        dongPolygons.push(new naver.maps.Polygon({
+          map,paths:[ca.map(c=>new naver.maps.LatLng(c[1],c[0]))],
+          strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12
+        }));
       });
       const fc=arr[0].map(c=>new naver.maps.LatLng(c[1],c[0]));
       const ct=fc.reduce((a,c)=>({lat:a.lat+c.lat()/fc.length,lng:a.lng+c.lng()/fc.length}),{lat:0,lng:0});
-      dongLabels.push(new naver.maps.Marker({position:new naver.maps.LatLng(ct.lat,ct.lng),map,icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},zIndex:5}));
+      dongLabels.push(new naver.maps.Marker({
+        position:new naver.maps.LatLng(ct.lat,ct.lng),map,
+        icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},
+        zIndex:5
+      }));
     });
   }catch(e){console.error('행정동 로드 실패:',e);}
 }
@@ -286,8 +269,14 @@ function updateMyDot(lat,lng,acc,heading){
   const pos=new naver.maps.LatLng(lat,lng);
   const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
   const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
-  if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});}
-  else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
+  if(!myDot){
+    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
+    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
+    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
+  }else{
+    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
+    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
+  }
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
@@ -309,7 +298,11 @@ function locateOnce(){
 function upd(p){
   const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
   const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
-  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
+  document.getElementById('vR').textContent=f(rM);
+  document.getElementById('vD').textContent=f(rM*2);
+  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
+  document.getElementById('sv').textContent=f(rM);
+  document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
 [{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
@@ -318,7 +311,13 @@ function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).t
   document.getElementById('ps').appendChild(b);
 });
 function clearAll(){
-  isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
+  isLocked=false;
+  document.getElementById('lockBtn').textContent='🔓';
+  document.getElementById('lockBtn').classList.remove('locked');
+  document.getElementById('lockBadge').classList.remove('show');
+  document.getElementById('statR').classList.remove('locked-stat');
+  document.getElementById('sl').disabled=false;
+  document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
   if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
