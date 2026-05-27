@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>영진이네 반경측정기</title>
+<title>영진 반경측정기</title>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -12,14 +12,12 @@
 html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 header{height:52px;background:var(--g);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:999}
-.brand{display:flex;align-items:center;gap:2px;white-space:nowrap;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
 .brand-yj{font-family:'Jua',sans-serif;font-size:19px;color:#fff;letter-spacing:-0.5px;text-shadow:2px 2px 0px rgba(0,0,0,0.2)}
 .brand-yj span{display:inline-block;animation:bounce 1.2s infinite alternate}
-.brand-yj span:nth-child(2){animation-delay:.1s}
-.brand-yj span:nth-child(3){animation-delay:.2s}
-.brand-yj span:nth-child(4){animation-delay:.3s}
+.brand-yj span:nth-child(2){animation-delay:.15s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
-.brand-sub{font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.3px;margin-left:2px}
+.brand-sub{font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.3px}
 .hs{flex:1;display:flex;gap:6px;margin-left:6px}
 .hs input{flex:1;padding:7px 12px;border-radius:20px;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:13px;outline:none;min-width:0}
 .hs input::placeholder{color:rgba(255,255,255,.6)}
@@ -33,19 +31,31 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .tbs{position:absolute;top:12px;right:10px;z-index:500;display:flex;flex-direction:column;gap:3px}
 .tb{padding:5px 10px;background:rgba(12,14,20,.85);backdrop-filter:blur(6px);border:1px solid var(--bd);border-radius:6px;color:var(--mu);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .2s}
 .tb.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:700}
-
-/* 버튼 그룹 - 나침반 + 버튼들 */
 .btns{position:absolute;bottom:14px;right:10px;z-index:500;display:flex;flex-direction:column;gap:6px;align-items:center}
-
-/* 나침반 - 버튼과 같은 40x40 */
 #compass{width:40px;height:40px;pointer-events:none;flex-shrink:0}
 #compass svg{width:100%;height:100%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-
 .ib{width:40px;height:40px;background:rgba(12,14,20,.9);border:1px solid var(--bd);border-radius:50%;color:var(--g);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all .2s;flex-shrink:0}
 .ib.tracking{background:var(--g);color:#fff;border-color:var(--g)}
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
 
-.cb{position:absolute;bottom:14px;left:10px;z-index:500;background:rgba(12,14,20,.82);border-radius:8px;padding:6px 10px;font-family:monospace;font-size:9px;color:var(--mu);pointer-events:none;line-height:1.6}
+/* 위치 정보 바 - 네이버 그린 계열로 */
+.cb{
+  position:absolute;bottom:14px;left:10px;z-index:500;
+  background:linear-gradient(135deg,rgba(3,199,90,0.22),rgba(3,199,90,0.10));
+  border:1px solid rgba(3,199,90,0.45);
+  backdrop-filter:blur(10px);
+  border-radius:10px;
+  padding:7px 12px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:#c8ffd4;
+  pointer-events:none;
+  line-height:1.7;
+  letter-spacing:0.2px;
+  box-shadow:0 2px 12px rgba(3,199,90,0.15);
+}
+.cb-label{font-size:8px;color:rgba(3,199,90,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
@@ -73,9 +83,7 @@ input[type=range]:disabled{opacity:.4}
 <div id="app">
 <header>
   <div class="brand">
-    <div class="brand-yj">
-      <span>영</span><span>진</span><span>이</span><span>네</span>
-    </div>
+    <div class="brand-yj"><span>영</span><span>진</span></div>
     <div class="brand-sub">반경측정기</div>
   </div>
   <div class="hs">
@@ -96,7 +104,6 @@ input[type=range]:disabled{opacity:.4}
     <button class="tb" onclick="setType('HYBRID',this)">🌐 혼합</button>
   </div>
 
-  <!-- 나침반 + 버튼 그룹 -->
   <div class="btns">
     <div id="compass">
       <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -120,7 +127,12 @@ input[type=range]:disabled{opacity:.4}
     <button class="ib" onclick="locateOnce()">⊕</button>
   </div>
 
-  <div class="cb" id="cb">위치 정보 없음</div>
+  <div class="cb" id="cb">
+    <div class="cb-label">내 위치</div>
+    <div id="cbLat">위도 —</div>
+    <div id="cbLng">경도 —</div>
+    <div id="cbAcc">정확도 —</div>
+  </div>
 </div>
 
 <div id="panel">
@@ -146,10 +158,7 @@ const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.075
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 
-function updateCompass(h){
-  lastHeading=h;
-  document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);
-}
+function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
 function startCompass(){
   if(!window.DeviceOrientationEvent)return;
   if(typeof DeviceOrientationEvent.requestPermission==='function'){
@@ -191,14 +200,16 @@ function updateMyDot(lat,lng,acc,heading){
     myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
     myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
   }
-  document.getElementById('cb').textContent=`내위치: ${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E\n정확도: ±${Math.round(acc)}m`;
+  document.getElementById('cbLat').textContent=`위도  ${lat.toFixed(5)}°N`;
+  document.getElementById('cbLng').textContent=`경도  ${lng.toFixed(5)}°E`;
+  document.getElementById('cbAcc').textContent=`정확도 ±${Math.round(acc)}m`;
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
   isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();
   watchId=navigator.geolocation.watchPosition(
-    pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h,speed:sp}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
+    pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
     err=>{alert('위치 추적 실패');stopTracking();},
     {enableHighAccuracy:true,maximumAge:500,timeout:10000}
   );
