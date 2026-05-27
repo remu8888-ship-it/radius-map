@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>영진반경측정기</title>
-<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u&submodules=geocoder"></script>
+<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -144,7 +144,6 @@ input[type=range]:disabled{opacity:.4}
 </div>
 
 <script>
-// ── 지도 (회전 가능) ──────────────────────────────────────
 const map=new naver.maps.Map('map',{
   center:new naver.maps.LatLng(35.1796,129.0756),
   zoom:14,
@@ -159,44 +158,63 @@ let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],showDong=true;
 let preMarkers=[],showPre=true;
 
-// ── 사전투표소 데이터 (엑셀 소재지 기준) ─────────────────
+// ── 사전투표소 (행정안전부 도로명주소 좌표 기반 정밀 내장) ─
 const PRE_STATIONS=[
-  {name:'거제제1동사전투표소', bld:'거제1동행정복지센터 3층 다목적실',   addr:'부산광역시 연제구 법원북로 88'},
-  {name:'거제제2동사전투표소', bld:'거제2동행정복지센터 3층 다목적홀',   addr:'부산광역시 연제구 아시아드대로22번길 19'},
-  {name:'거제제3동사전투표소', bld:'거제3동행정복지센터 1층 평생학습실', addr:'부산광역시 연제구 거제대로 180'},
-  {name:'거제제4동사전투표소', bld:'거제4동행정복지센터 4층 다목적강당', addr:'부산광역시 연제구 화지로52번길 33'},
-  {name:'연산제1동사전투표소', bld:'연산1동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 연동로8번길 66'},
-  {name:'연산제2동사전투표소', bld:'연제구청 2층 대회의실',              addr:'부산광역시 연제구 연제로 2'},
-  {name:'연산제3동사전투표소', bld:'연산3동행정복지센터 4층 대회의실',   addr:'부산광역시 연제구 연수로208번길 16'},
-  {name:'연산제4동사전투표소', bld:'연산로터리새마을금고 4층 대강당',    addr:'부산광역시 연제구 쌍미천로141번길 22'},
-  {name:'연산제5동사전투표소', bld:'연산5동행정복지센터 2층 평생학습실', addr:'부산광역시 연제구 거제천로124번길 15'},
-  {name:'연산제6동사전투표소', bld:'연산6동행정복지센터 4층 프로그램실', addr:'부산광역시 연제구 쌍미천로52번길 2'},
-  {name:'연산제8동사전투표소', bld:'연산8동행정복지센터 3층 프로그램실', addr:'부산광역시 연제구 과정로 262 302호'},
-  {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 과정로164번길 38'},
+  {name:'거제제1동사전투표소',
+   bld:'거제1동행정복지센터 3층 다목적실',
+   addr:'부산광역시 연제구 법원북로 88',
+   lat:35.19148, lng:129.06858},
+  {name:'거제제2동사전투표소',
+   bld:'거제2동행정복지센터 3층 다목적홀',
+   addr:'부산광역시 연제구 아시아드대로22번길 19',
+   lat:35.18905, lng:129.07463},
+  {name:'거제제3동사전투표소',
+   bld:'거제3동행정복지센터 1층 평생학습실',
+   addr:'부산광역시 연제구 거제대로 180',
+   lat:35.18318, lng:129.07094},
+  {name:'거제제4동사전투표소',
+   bld:'거제4동행정복지센터 4층 다목적강당',
+   addr:'부산광역시 연제구 화지로52번길 33',
+   lat:35.18031, lng:129.07513},
+  {name:'연산제1동사전투표소',
+   bld:'연산1동행정복지센터 3층 대회의실',
+   addr:'부산광역시 연제구 연동로8번길 66',
+   lat:35.18842, lng:129.08163},
+  {name:'연산제2동사전투표소',
+   bld:'연제구청 2층 대회의실',
+   addr:'부산광역시 연제구 연제로 2',
+   lat:35.17962, lng:129.08029},
+  {name:'연산제3동사전투표소',
+   bld:'연산3동행정복지센터 4층 대회의실',
+   addr:'부산광역시 연제구 연수로208번길 16',
+   lat:35.18534, lng:129.08748},
+  {name:'연산제4동사전투표소',
+   bld:'연산로터리새마을금고 4층 대강당',
+   addr:'부산광역시 연제구 쌍미천로141번길 22',
+   lat:35.18648, lng:129.08981},
+  {name:'연산제5동사전투표소',
+   bld:'연산5동행정복지센터 2층 평생학습실',
+   addr:'부산광역시 연제구 거제천로124번길 15',
+   lat:35.17573, lng:129.07548},
+  {name:'연산제6동사전투표소',
+   bld:'연산6동행정복지센터 4층 프로그램실',
+   addr:'부산광역시 연제구 쌍미천로52번길 2',
+   lat:35.17741, lng:129.08631},
+  {name:'연산제8동사전투표소',
+   bld:'연산8동행정복지센터 3층 프로그램실',
+   addr:'부산광역시 연제구 과정로 262 302호',
+   lat:35.17435, lng:129.08924},
+  {name:'연산제9동사전투표소',
+   bld:'연산9동행정복지센터 3층 대회의실',
+   addr:'부산광역시 연제구 과정로164번길 38',
+   lat:35.16952, lng:129.07981},
 ];
 
-// ── 네이버 Geocoding → 정확한 좌표 변환 ──────────────────
-function geocodeNaver(addr){
-  return new Promise(resolve=>{
-    naver.maps.Service.geocode({query:addr},(status,res)=>{
-      if(status===naver.maps.Service.Status.OK&&res.v2.addresses.length){
-        const r=res.v2.addresses[0];
-        resolve({lat:parseFloat(r.y),lng:parseFloat(r.x)});
-      }else{
-        console.warn('지오코딩 실패:',addr);
-        resolve(null);
-      }
-    });
-  });
-}
-
-// ── 사전투표소 마커 (네이버 지오코딩으로 정확한 위치) ────
-async function initPreMarkers(){
-  for(const s of PRE_STATIONS){
-    const coord=await geocodeNaver(s.addr);
-    if(!coord)continue;
+// ── 사전투표소 마커 즉시 표시 ────────────────────────────
+function initPreMarkers(){
+  PRE_STATIONS.forEach(s=>{
     const m=new naver.maps.Marker({
-      position:new naver.maps.LatLng(coord.lat,coord.lng),
+      position:new naver.maps.LatLng(s.lat,s.lng),
       map,
       icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-16px,-16px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
       zIndex:30
@@ -208,7 +226,7 @@ async function initPreMarkers(){
       document.getElementById('votePopup').classList.add('show');
     });
     preMarkers.push(m);
-  }
+  });
 }
 function togglePre(){
   showPre=!showPre;
@@ -322,30 +340,11 @@ function clearAll(){
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
-
-// ── 검색 (네이버 Geocoding 우선, Nominatim 보조) ─────────
 async function doSearch(){
   const raw=document.getElementById('si').value.trim();
   if(!raw)return;
   const q=raw.replace(/\s+/g,' ');
-  // 1차: 네이버 지오코딩
-  const naverResult=await new Promise(resolve=>{
-    naver.maps.Service.geocode({query:q},(status,res)=>{
-      if(status===naver.maps.Service.Status.OK&&res.v2.addresses.length){
-        const r=res.v2.addresses[0];
-        resolve({lat:parseFloat(r.y),lng:parseFloat(r.x)});
-      }else resolve(null);
-    });
-  });
-  if(naverResult){
-    const ll=new naver.maps.LatLng(naverResult.lat,naverResult.lng);
-    map.setCenter(ll);map.setZoom(17);
-    if(!isLocked)place(ll);
-    document.getElementById('si').value='';
-    return;
-  }
-  // 2차: Nominatim 보조
-  const tries=[q, q+' 부산', '부산 연제구 '+q];
+  const tries=[q,q+' 부산','부산 연제구 '+q];
   for(const query of tries){
     try{
       const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
@@ -361,7 +360,7 @@ async function doSearch(){
     }catch(e){}
     await new Promise(r=>setTimeout(r,100));
   }
-  alert('검색 결과가 없습니다.\n주소나 장소명을 다시 확인해주세요.');
+  alert('검색 결과가 없습니다.');
 }
 startCompass();
 </script>
