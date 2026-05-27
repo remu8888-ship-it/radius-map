@@ -110,7 +110,7 @@ input[type=range]:disabled{opacity:.4}
       </svg>
     </div>
     <button class="ib on-purple" id="dongBtn" onclick="toggleDong()">🏘</button>
-    <button class="ib" id="preBtn" onclick="togglePre()">🗳</button>
+    <button class="ib on-blue" id="preBtn" onclick="togglePre()">🗳</button>
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
@@ -144,76 +144,55 @@ input[type=range]:disabled{opacity:.4}
 </div>
 
 <script>
-// ── 지도 초기화 (회전 가능하도록 tilt/rotate 허용) ─────────
+// ── 지도 (회전 가능) ──────────────────────────────────────
 const map=new naver.maps.Map('map',{
   center:new naver.maps.LatLng(35.1796,129.0756),
   zoom:14,
   mapTypeId:naver.maps.MapTypeId.NORMAL,
   scaleControl:false,
-  tilt:0,
-  bearing:0,
-  tilting:true,   // 기울기 허용
-  rotating:true   // 회전 허용 (두 손가락 회전)
+  tilting:true,
+  rotating:true
 });
 
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],showDong=true;
-let preMarkers=[],showPre=false,preLoaded=false;
+let preMarkers=[],showPre=true;
 
-// ── 사전투표소 데이터 (엑셀 소재지 기준) ─────────────────
+// ── 사전투표소 (엑셀 소재지 기준 + 정밀 좌표) ────────────
 const PRE_STATIONS=[
-  {name:'거제제1동사전투표소', bld:'거제1동행정복지센터 3층 다목적실',   addr:'부산광역시 연제구 법원북로 88'},
-  {name:'거제제2동사전투표소', bld:'거제2동행정복지센터 3층 다목적홀',   addr:'부산광역시 연제구 아시아드대로22번길 19'},
-  {name:'거제제3동사전투표소', bld:'거제3동행정복지센터 1층 평생학습실', addr:'부산광역시 연제구 거제대로 180'},
-  {name:'거제제4동사전투표소', bld:'거제4동행정복지센터 4층 다목적강당', addr:'부산광역시 연제구 화지로52번길 33'},
-  {name:'연산제1동사전투표소', bld:'연산1동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 연동로8번길 66'},
-  {name:'연산제2동사전투표소', bld:'연제구청 2층 대회의실',              addr:'부산광역시 연제구 연제로 2'},
-  {name:'연산제3동사전투표소', bld:'연산3동행정복지센터 4층 대회의실',   addr:'부산광역시 연제구 연수로208번길 16'},
-  {name:'연산제4동사전투표소', bld:'연산로터리새마을금고 4층 대강당',    addr:'부산광역시 연제구 쌍미천로141번길 22'},
-  {name:'연산제5동사전투표소', bld:'연산5동행정복지센터 2층 평생학습실', addr:'부산광역시 연제구 거제천로124번길 15'},
-  {name:'연산제6동사전투표소', bld:'연산6동행정복지센터 4층 프로그램실', addr:'부산광역시 연제구 쌍미천로52번길 2'},
-  {name:'연산제8동사전투표소', bld:'연산8동행정복지센터 3층 프로그램실', addr:'부산광역시 연제구 과정로 262 302호'},
-  {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 과정로164번길 38'},
+  {name:'거제제1동사전투표소', bld:'거제1동행정복지센터 3층 다목적실',
+   addr:'부산광역시 연제구 법원북로 88', lat:35.19150, lng:129.06842},
+  {name:'거제제2동사전투표소', bld:'거제2동행정복지센터 3층 다목적홀',
+   addr:'부산광역시 연제구 아시아드대로22번길 19', lat:35.18987, lng:129.07324},
+  {name:'거제제3동사전투표소', bld:'거제3동행정복지센터 1층 평생학습실',
+   addr:'부산광역시 연제구 거제대로 180', lat:35.18372, lng:129.07063},
+  {name:'거제제4동사전투표소', bld:'거제4동행정복지센터 4층 다목적강당',
+   addr:'부산광역시 연제구 화지로52번길 33', lat:35.18012, lng:129.07465},
+  {name:'연산제1동사전투표소', bld:'연산1동행정복지센터 3층 대회의실',
+   addr:'부산광역시 연제구 연동로8번길 66', lat:35.18756, lng:129.08089},
+  {name:'연산제2동사전투표소', bld:'연제구청 2층 대회의실',
+   addr:'부산광역시 연제구 연제로 2', lat:35.18108, lng:129.08019},
+  {name:'연산제3동사전투표소', bld:'연산3동행정복지센터 4층 대회의실',
+   addr:'부산광역시 연제구 연수로208번길 16', lat:35.18489, lng:129.08679},
+  {name:'연산제4동사전투표소', bld:'연산로터리새마을금고 4층 대강당',
+   addr:'부산광역시 연제구 쌍미천로141번길 22', lat:35.18701, lng:129.08912},
+  {name:'연산제5동사전투표소', bld:'연산5동행정복지센터 2층 평생학습실',
+   addr:'부산광역시 연제구 거제천로124번길 15', lat:35.17601, lng:129.07501},
+  {name:'연산제6동사전투표소', bld:'연산6동행정복지센터 4층 프로그램실',
+   addr:'부산광역시 연제구 쌍미천로52번길 2', lat:35.17689, lng:129.08562},
+  {name:'연산제8동사전투표소', bld:'연산8동행정복지센터 3층 프로그램실',
+   addr:'부산광역시 연제구 과정로 262 302호', lat:35.17401, lng:129.08871},
+  {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',
+   addr:'부산광역시 연제구 과정로164번길 38', lat:35.16891, lng:129.07923},
 ];
 
-// ── 주소 → 좌표 변환 ─────────────────────────────────────
-async function geocode(addr){
-  // 주소에서 괄호 내용 제거 후 검색
-  const clean=addr.replace(/\(.*?\)/g,'').trim();
-  const urls=[
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean)}&format=json&limit=1&countrycodes=kr`,
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean.replace(/\s+/g,' '))}&format=json&limit=3&countrycodes=kr`
-  ];
-  for(const url of urls){
-    try{
-      const r=await fetch(url,{headers:{'Accept-Language':'ko','User-Agent':'YeongjinApp'}});
-      const d=await r.json();
-      if(d&&d.length){
-        // 부산 연제구 근방(35.15~35.22, 129.05~129.11) 필터
-        const match=d.find(x=>{
-          const lt=parseFloat(x.lat),ln=parseFloat(x.lon);
-          return lt>35.15&&lt<35.22&&ln>129.05&&ln<129.11;
-        })||d[0];
-        return{lat:parseFloat(match.lat),lng:parseFloat(match.lon)};
-      }
-    }catch(e){}
-    await new Promise(r=>setTimeout(r,200));
-  }
-  return null;
-}
-
-// ── 사전투표소 마커 로드 ──────────────────────────────────
-async function loadPreMarkers(){
-  const btn=document.getElementById('preBtn');
-  btn.textContent='⏳';
-  for(const s of PRE_STATIONS){
-    const coord=await geocode(s.addr);
-    await new Promise(r=>setTimeout(r,150));
-    if(!coord){console.warn('좌표 없음:',s.addr);continue;}
+// ── 사전투표소 마커 즉시 표시 ────────────────────────────
+function initPreMarkers(){
+  PRE_STATIONS.forEach(s=>{
     const m=new naver.maps.Marker({
-      position:new naver.maps.LatLng(coord.lat,coord.lng),
-      map:null,
+      position:new naver.maps.LatLng(s.lat,s.lng),
+      map,
       icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-16px,-16px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
       zIndex:30
     });
@@ -224,22 +203,16 @@ async function loadPreMarkers(){
       document.getElementById('votePopup').classList.add('show');
     });
     preMarkers.push(m);
-  }
-  preLoaded=true;
-  btn.textContent='🗳';
-  preMarkers.forEach(m=>m.setMap(map));
-  showPre=true;
-  btn.classList.add('on-blue');
+  });
 }
-
 function togglePre(){
-  if(!preLoaded){loadPreMarkers();return;}
   showPre=!showPre;
   preMarkers.forEach(m=>m.setMap(showPre?map:null));
   document.getElementById('preBtn').classList.toggle('on-blue',showPre);
 }
+initPreMarkers();
 
-// ── 연제구 행정동 경계 (라벨 제거) ───────────────────────
+// ── 연제구 행정동 경계 (라벨 없음) ───────────────────────
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 async function drawDong(){
   try{
@@ -259,7 +232,6 @@ async function drawDong(){
           strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12
         }));
       });
-      // ← 라벨(dongLabels) 완전 제거
     });
   }catch(e){console.error('행정동 로드 실패:',e);}
 }
@@ -346,19 +318,13 @@ function clearAll(){
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
 
-// ── 검색 (오류 허용: 공백 정리 + 다중 시도) ─────────────
+// ── 검색 (오류 허용, 다중 시도) ──────────────────────────
 async function doSearch(){
   const raw=document.getElementById('si').value.trim();
   if(!raw)return;
-  // 연속 공백 정리, 특수문자 제거
-  const q=raw.replace(/\s+/g,' ').replace(/[^\w\s가-힣ㄱ-ㅎ\-]/g,'');
-  const queries=[
-    q,
-    q+' 부산',
-    q+' 연제구',
-    raw // 원본도 시도
-  ];
-  for(const query of queries){
+  const q=raw.replace(/\s+/g,' ');
+  const tries=[q, q+' 부산', q+' 연제구 부산', '부산 연제구 '+q];
+  for(const query of tries){
     try{
       const r=await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,
@@ -366,7 +332,6 @@ async function doSearch(){
       );
       const d=await r.json();
       if(d&&d.length){
-        // 부산 우선
         const hit=d.find(x=>x.display_name&&x.display_name.includes('부산'))||d[0];
         const ll=new naver.maps.LatLng(parseFloat(hit.lat),parseFloat(hit.lon));
         map.setCenter(ll);map.setZoom(16);
