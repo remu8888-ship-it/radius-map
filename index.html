@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>영진의 반경측정기</title>
+<title>영진이네 반경측정기</title>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -12,36 +12,14 @@
 html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 header{height:52px;background:var(--g);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:999}
-
-.brand{display:flex;align-items:center;gap:0;white-space:nowrap;flex-shrink:0}
-.brand-yj{
-  font-family:'Jua',sans-serif;
-  font-size:20px;
-  color:#fff;
-  letter-spacing:-0.5px;
-  text-shadow:2px 2px 0px rgba(0,0,0,0.2);
-  position:relative;
-  top:1px;
-}
-.brand-yj span{
-  display:inline-block;
-  animation:bounce 1.2s infinite alternate;
-}
-.brand-yj span:nth-child(2){animation-delay:.15s}
+.brand{display:flex;align-items:center;gap:2px;white-space:nowrap;flex-shrink:0}
+.brand-yj{font-family:'Jua',sans-serif;font-size:19px;color:#fff;letter-spacing:-0.5px;text-shadow:2px 2px 0px rgba(0,0,0,0.2)}
+.brand-yj span{display:inline-block;animation:bounce 1.2s infinite alternate}
+.brand-yj span:nth-child(2){animation-delay:.1s}
+.brand-yj span:nth-child(3){animation-delay:.2s}
+.brand-yj span:nth-child(4){animation-delay:.3s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
-.brand-divider{
-  color:rgba(255,255,255,0.5);
-  font-size:14px;
-  margin:0 4px;
-  font-weight:300;
-}
-.brand-main{
-  font-size:15px;
-  font-weight:700;
-  color:#fff;
-  letter-spacing:-0.3px;
-}
-
+.brand-sub{font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.3px;margin-left:2px}
 .hs{flex:1;display:flex;gap:6px;margin-left:6px}
 .hs input{flex:1;padding:7px 12px;border-radius:20px;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:13px;outline:none;min-width:0}
 .hs input::placeholder{color:rgba(255,255,255,.6)}
@@ -50,22 +28,24 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 #map{width:100%;height:100%}
 .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(12,14,20,.85);backdrop-filter:blur(8px);border:1px solid rgba(3,199,90,.35);border-radius:20px;padding:7px 16px;font-size:11px;color:rgba(255,255,255,.8);z-index:500;pointer-events:none;white-space:nowrap;transition:opacity .3s}
 .hint.off{opacity:0}
-#compass{position:absolute;top:70px;left:12px;z-index:500;width:70px;height:70px;pointer-events:none}
-#compass svg{width:100%;height:100%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-#dirBox{position:absolute;top:150px;left:12px;z-index:500;background:rgba(12,14,20,.85);backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;pointer-events:none;min-width:80px}
-.dir-deg{font-family:monospace;font-size:18px;font-weight:700;color:var(--g);line-height:1}
-.dir-name{font-size:11px;color:var(--mu);margin-top:2px}
-.dir-speed{font-size:10px;color:var(--tx);margin-top:2px}
+.lock-badge{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:500;background:var(--gold);color:#000;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;pointer-events:none;display:none}
+.lock-badge.show{display:block}
 .tbs{position:absolute;top:12px;right:10px;z-index:500;display:flex;flex-direction:column;gap:3px}
 .tb{padding:5px 10px;background:rgba(12,14,20,.85);backdrop-filter:blur(6px);border:1px solid var(--bd);border-radius:6px;color:var(--mu);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .2s}
 .tb.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:700}
-.btns{position:absolute;bottom:14px;right:10px;z-index:500;display:flex;flex-direction:column;gap:6px}
-.ib{width:40px;height:40px;background:rgba(12,14,20,.9);border:1px solid var(--bd);border-radius:50%;color:var(--g);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all .2s}
+
+/* 버튼 그룹 - 나침반 + 버튼들 */
+.btns{position:absolute;bottom:14px;right:10px;z-index:500;display:flex;flex-direction:column;gap:6px;align-items:center}
+
+/* 나침반 - 버튼과 같은 40x40 */
+#compass{width:40px;height:40px;pointer-events:none;flex-shrink:0}
+#compass svg{width:100%;height:100%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+
+.ib{width:40px;height:40px;background:rgba(12,14,20,.9);border:1px solid var(--bd);border-radius:50%;color:var(--g);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all .2s;flex-shrink:0}
 .ib.tracking{background:var(--g);color:#fff;border-color:var(--g)}
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
+
 .cb{position:absolute;bottom:14px;left:10px;z-index:500;background:rgba(12,14,20,.82);border-radius:8px;padding:6px 10px;font-family:monospace;font-size:9px;color:var(--mu);pointer-events:none;line-height:1.6}
-.lock-badge{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:500;background:var(--gold);color:#000;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;pointer-events:none;display:none}
-.lock-badge.show{display:block}
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
@@ -93,54 +73,56 @@ input[type=range]:disabled{opacity:.4}
 <div id="app">
 <header>
   <div class="brand">
-    <div class="brand-yj"><span>영</span><span>진</span></div>
-    <div class="brand-divider">의</div>
-    <div class="brand-main">📍반경측정기</div>
+    <div class="brand-yj">
+      <span>영</span><span>진</span><span>이</span><span>네</span>
+    </div>
+    <div class="brand-sub">반경측정기</div>
   </div>
   <div class="hs">
     <input type="text" id="si" placeholder="주소·장소 검색…" onkeydown="if(event.key==='Enter')doSearch()">
     <button onclick="doSearch()">검색</button>
   </div>
 </header>
+
 <div id="mw">
   <div id="map"></div>
-  <div class="hint" id="hint">📍 지도를 터치하거나 주소를 검색하세요</div>
+  <div class="hint" id="hint">지도를 터치하거나 주소를 검색하세요</div>
   <div class="lock-badge" id="lockBadge">🔒 반경 고정됨</div>
-  <div id="compass">
-    <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="35" cy="35" r="33" fill="rgba(12,14,20,0.85)" stroke="#222533" stroke-width="2"/>
-      <line x1="35" y1="4" x2="35" y2="10" stroke="#5a6070" stroke-width="1.5"/>
-      <line x1="35" y1="60" x2="35" y2="66" stroke="#5a6070" stroke-width="1.5"/>
-      <line x1="4" y1="35" x2="10" y2="35" stroke="#5a6070" stroke-width="1.5"/>
-      <line x1="60" y1="35" x2="66" y2="35" stroke="#5a6070" stroke-width="1.5"/>
-      <text x="35" y="18" text-anchor="middle" font-size="9" font-weight="bold" fill="#ff4757">N</text>
-      <text x="35" y="56" text-anchor="middle" font-size="8" fill="#5a6070">S</text>
-      <text x="57" y="39" text-anchor="middle" font-size="8" fill="#5a6070">E</text>
-      <text x="13" y="39" text-anchor="middle" font-size="8" fill="#5a6070">W</text>
-      <g id="needle" transform="rotate(0,35,35)">
-        <polygon points="35,8 31,35 35,30 39,35" fill="#ff4757"/>
-        <polygon points="35,62 31,35 35,40 39,35" fill="#eef0f5" opacity="0.6"/>
-      </g>
-    </svg>
-  </div>
-  <div id="dirBox">
-    <div class="dir-deg" id="dirDeg">—°</div>
-    <div class="dir-name" id="dirName">방향 없음</div>
-    <div class="dir-speed" id="dirSpeed">속도: —</div>
-  </div>
+
   <div class="tbs">
     <button class="tb on" onclick="setType('NORMAL',this)">🗺 일반</button>
     <button class="tb" onclick="setType('SATELLITE',this)">🛰 위성</button>
     <button class="tb" onclick="setType('TERRAIN',this)">🗻 지형</button>
     <button class="tb" onclick="setType('HYBRID',this)">🌐 혼합</button>
   </div>
+
+  <!-- 나침반 + 버튼 그룹 -->
   <div class="btns">
+    <div id="compass">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="19" fill="rgba(12,14,20,0.9)" stroke="#222533" stroke-width="1.5"/>
+        <line x1="20" y1="2" x2="20" y2="6" stroke="#5a6070" stroke-width="1"/>
+        <line x1="20" y1="34" x2="20" y2="38" stroke="#5a6070" stroke-width="1"/>
+        <line x1="2" y1="20" x2="6" y2="20" stroke="#5a6070" stroke-width="1"/>
+        <line x1="34" y1="20" x2="38" y2="20" stroke="#5a6070" stroke-width="1"/>
+        <text x="20" y="11" text-anchor="middle" font-size="6" font-weight="bold" fill="#ff4757">N</text>
+        <text x="20" y="33" text-anchor="middle" font-size="5" fill="#5a6070">S</text>
+        <text x="33" y="22" text-anchor="middle" font-size="5" fill="#5a6070">E</text>
+        <text x="7" y="22" text-anchor="middle" font-size="5" fill="#5a6070">W</text>
+        <g id="needle" transform="rotate(0,20,20)">
+          <polygon points="20,4 17,20 20,17 23,20" fill="#ff4757"/>
+          <polygon points="20,36 17,20 20,23 23,20" fill="#eef0f5" opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
   </div>
+
   <div class="cb" id="cb">위치 정보 없음</div>
 </div>
+
 <div id="panel">
   <div class="stats">
     <div class="sb hl" id="statR"><div class="sl">반경</div><div class="sv" id="vR">—</div></div>
@@ -158,31 +140,104 @@ input[type=range]:disabled{opacity:.4}
   <div class="ci" id="ci">중심점을 설정하세요</div>
 </div>
 </div>
+
 <script>
 const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.0756),zoom:14,mapTypeId:naver.maps.MapTypeId.NORMAL,scaleControl:false});
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 
-function headingName(h){return['북(N)','북동(NE)','동(E)','남동(SE)','남(S)','남서(SW)','서(W)','북서(NW)'][Math.round(h/45)%8];}
-function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},35,35)`);document.getElementById('dirDeg').textContent=`${Math.round(h)}°`;document.getElementById('dirName').textContent=headingName(h);}
-function startCompass(){if(window.DeviceOrientationEvent){if(typeof DeviceOrientationEvent.requestPermission==='function'){DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrient)});}else{window.addEventListener('deviceorientation',onOrient);}}}
-function onOrient(e){let h=e.alpha||0;if(e.webkitCompassHeading)h=e.webkitCompassHeading;updateCompass(h);}
+function updateCompass(h){
+  lastHeading=h;
+  document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);
+}
+function startCompass(){
+  if(!window.DeviceOrientationEvent)return;
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrient);});
+  }else{window.addEventListener('deviceorientation',onOrient);}
+}
+function onOrient(e){let h=e.webkitCompassHeading||e.alpha||0;updateCompass(h);}
 function setType(t,b){document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));b.classList.add('on');map.setMapTypeId(naver.maps.MapTypeId[t]);}
 function dist(a,b){const R=6371000,r=x=>x*Math.PI/180,dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());return R*2*Math.atan2(Math.sqrt(Math.sin(dLa/2)**2+Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2),Math.sqrt(1-Math.sin(dLa/2)**2-Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2));}
 function eLL(c,r){return new naver.maps.LatLng(c.lat(),c.lng()+(r/(6378137*Math.cos(c.lat()*Math.PI/180)))*(180/Math.PI));}
-function toggleLock(){if(!cM){alert('먼저 중심점을 설정하세요.');return;}isLocked=!isLocked;const btn=document.getElementById('lockBtn'),badge=document.getElementById('lockBadge'),statR=document.getElementById('statR'),sl=document.getElementById('sl');if(isLocked){btn.textContent='🔒';btn.classList.add('locked');badge.classList.add('show');statR.classList.add('locked-stat');sl.disabled=true;if(cM)cM.setOptions({draggable:false});if(eM)eM.setOptions({draggable:false});document.querySelectorAll('.pb').forEach(b=>b.disabled=true);}else{btn.textContent='🔓';btn.classList.remove('locked');badge.classList.remove('show');statR.classList.remove('locked-stat');sl.disabled=false;if(cM)cM.setOptions({draggable:true});if(eM)eM.setOptions({draggable:true});document.querySelectorAll('.pb').forEach(b=>b.disabled=false);}}
-function place(pos){if(isLocked)return;if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);}cM=new naver.maps.Marker({position:pos,map,icon:{content:'<div style="width:20px;height:20px;background:#03C75A;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(3,199,90,.4);transform:translate(-10px,-10px);cursor:move"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});circ=new naver.maps.Circle({map,center:pos,radius:rM,strokeColor:'#03C75A',strokeWeight:2,strokeStyle:'dash',strokeOpacity:.9,fillColor:'#03C75A',fillOpacity:.08});eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});naver.maps.Event.addListener(cM,'drag',e=>{if(isLocked)return;circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord);});naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(dist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});document.getElementById('hint').classList.add('off');upd(pos);}
+function toggleLock(){
+  if(!cM){alert('먼저 중심점을 설정하세요.');return;}
+  isLocked=!isLocked;
+  const btn=document.getElementById('lockBtn'),badge=document.getElementById('lockBadge'),statR=document.getElementById('statR'),sl=document.getElementById('sl');
+  if(isLocked){btn.textContent='🔒';btn.classList.add('locked');badge.classList.add('show');statR.classList.add('locked-stat');sl.disabled=true;if(cM)cM.setOptions({draggable:false});if(eM)eM.setOptions({draggable:false});document.querySelectorAll('.pb').forEach(b=>b.disabled=true);}
+  else{btn.textContent='🔓';btn.classList.remove('locked');badge.classList.remove('show');statR.classList.remove('locked-stat');sl.disabled=false;if(cM)cM.setOptions({draggable:true});if(eM)eM.setOptions({draggable:true});document.querySelectorAll('.pb').forEach(b=>b.disabled=false);}
+}
+function place(pos){
+  if(isLocked)return;
+  if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);}
+  cM=new naver.maps.Marker({position:pos,map,icon:{content:'<div style="width:20px;height:20px;background:#03C75A;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(3,199,90,.4);transform:translate(-10px,-10px);cursor:move"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
+  circ=new naver.maps.Circle({map,center:pos,radius:rM,strokeColor:'#03C75A',strokeWeight:2,strokeStyle:'dash',strokeOpacity:.9,fillColor:'#03C75A',fillOpacity:.08});
+  eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
+  naver.maps.Event.addListener(cM,'drag',e=>{if(isLocked)return;circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord);});
+  naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(dist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});
+  document.getElementById('hint').classList.add('off');
+  upd(pos);
+}
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
-function updateMyDot(lat,lng,acc,heading){const pos=new naver.maps.LatLng(lat,lng);const arrowContent=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;const dotContent='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dotContent,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrowContent,anchor:new naver.maps.Point(0,0)},zIndex:21});}else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrowContent,anchor:new naver.maps.Point(0,0)});}document.getElementById('cb').textContent=`내위치: ${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E\n정확도: ±${Math.round(acc)}m`;}
+function updateMyDot(lat,lng,acc,heading){
+  const pos=new naver.maps.LatLng(lat,lng);
+  const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
+  const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
+  if(!myDot){
+    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
+    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
+    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
+  }else{
+    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
+    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
+  }
+  document.getElementById('cb').textContent=`내위치: ${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E\n정확도: ±${Math.round(acc)}m`;
+}
 function toggleTracking(){isTracking?stopTracking():startTracking();}
-function startTracking(){if(!navigator.geolocation){alert('위치 서비스 미지원');return;}isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();watchId=navigator.geolocation.watchPosition(pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h,speed:sp}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);document.getElementById('dirSpeed').textContent=sp!=null?`속도: ${(sp*3.6).toFixed(1)} km/h`:'속도: —';if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},err=>{alert('위치 추적 실패');stopTracking();},{enableHighAccuracy:true,maximumAge:500,timeout:10000});}
+function startTracking(){
+  if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
+  isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();
+  watchId=navigator.geolocation.watchPosition(
+    pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h,speed:sp}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
+    err=>{alert('위치 추적 실패');stopTracking();},
+    {enableHighAccuracy:true,maximumAge:500,timeout:10000}
+  );
+}
 function stopTracking(){isTracking=false;document.getElementById('trackBtn').classList.remove('tracking');if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
-function locateOnce(){if(!navigator.geolocation){alert('위치 서비스 미지원');return;}navigator.geolocation.getCurrentPosition(pos=>{const ll=new naver.maps.LatLng(pos.coords.latitude,pos.coords.longitude);map.setCenter(ll);map.setZoom(15);updateMyDot(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,lastHeading);if(!isLocked)place(ll);},()=>alert('위치를 가져올 수 없습니다.'));}
-function upd(p){const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;}
+function locateOnce(){
+  if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{const ll=new naver.maps.LatLng(pos.coords.latitude,pos.coords.longitude);map.setCenter(ll);map.setZoom(15);updateMyDot(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,lastHeading);if(!isLocked)place(ll);},
+    ()=>alert('위치를 가져올 수 없습니다.')
+  );
+}
+function upd(p){
+  const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
+  const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
+  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
+}
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
-[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{const b=document.createElement('button');b.className='pb';b.textContent=p.l;b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=p.v>=1000?(p.v/1000)+' km':p.v+' m';};document.getElementById('ps').appendChild(b);});
-function clearAll(){isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('ci').textContent='중심점을 설정하세요';document.getElementById('hint').classList.remove('off');}
-async function doSearch(){const q=document.getElementById('si').value.trim();if(!q)return;try{const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});const data=await res.json();if(!data||!data.length){alert('검색 결과가 없습니다.');return;}const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';}catch(e){alert('검색 오류: '+e.message);}}
+[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
+  const b=document.createElement('button');b.className='pb';b.textContent=p.l;
+  b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=p.v>=1000?(p.v/1000)+' km':p.v+' m';};
+  document.getElementById('ps').appendChild(b);
+});
+function clearAll(){
+  isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
+  if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}
+  ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('ci').textContent='중심점을 설정하세요';document.getElementById('hint').classList.remove('off');
+}
+async function doSearch(){
+  const q=document.getElementById('si').value.trim();if(!q)return;
+  try{
+    const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
+    const data=await res.json();
+    if(!data||!data.length){alert('검색 결과가 없습니다.');return;}
+    const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));
+    map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';
+  }catch(e){alert('검색 오류: '+e.message);}
+}
 startCompass();
 </script>
 </body>
