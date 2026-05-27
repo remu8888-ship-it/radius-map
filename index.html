@@ -44,10 +44,10 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib.on-blue{background:#2563eb;color:#fff;border-color:#2563eb}
 .vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:230px;display:none;backdrop-filter:blur(10px)}
 .vote-popup.show{display:block}
-.vp-type{font-size:9px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.vp-type{font-size:9px;color:#2563eb;font-weight:700;letter-spacing:1px;margin-bottom:4px}
 .vp-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
-.vp-addr{font-size:10px;color:var(--mu);line-height:1.6}
-.vp-time{font-size:10px;color:var(--g);margin-top:4px;font-weight:700}
+.vp-addr{font-size:10px;color:var(--mu);line-height:1.6;white-space:pre-line}
+.vp-time{font-size:10px;color:var(--g);margin-top:5px;font-weight:700}
 .vp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--mu);font-size:14px;cursor:pointer}
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
@@ -151,30 +151,50 @@ const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.075
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],dongLabels=[],showDong=true;
-let preMarkers=[],showPre=false;
+let preMarkers=[],showPre=false,preLoaded=false;
 
-// ── 연제구 사전투표소 (공식 확정 데이터) ──────────────────
+// ── 사전투표소 데이터 (주소 기반, 정밀 좌표는 geocode로 취득)
 const PRE_STATIONS=[
-  {name:'거제제1동 사전투표소',addr:'부산광역시 연제구 법원북로 88',sub:'거제1동행정복지센터 3층 다목적실',lat:35.1889,lng:129.0705},
-  {name:'거제제2동 사전투표소',addr:'부산광역시 연제구 아시아드대로22번길 19',sub:'거제2동행정복지센터 3층 다목적홀',lat:35.1872,lng:129.0768},
-  {name:'거제제3동 사전투표소',addr:'부산광역시 연제구 거제대로 180',sub:'거제3동행정복지센터 1층 평생학습실',lat:35.1820,lng:129.0712},
-  {name:'거제제4동 사전투표소',addr:'부산광역시 연제구 화지로52번길 33',sub:'거제4동행정복지센터 4층 다목적강당',lat:35.1805,lng:129.0768},
-  {name:'연산제1동 사전투표소',addr:'부산광역시 연제구 연동로8번길 66',sub:'연산1동행정복지센터 3층 대회의실',lat:35.1872,lng:129.0832},
-  {name:'연산제2동 사전투표소',addr:'부산광역시 연제구 연제로 2',sub:'연제구청 2층 대회의실',lat:35.1796,lng:129.0810},
-  {name:'연산제3동 사전투표소',addr:'부산광역시 연제구 연수로208번길 16',sub:'연산3동행정복지센터 4층 대회의실',lat:35.1838,lng:129.0868},
-  {name:'연산제4동 사전투표소',addr:'부산광역시 연제구 쌍미천로141번길 22',sub:'연산로터리새마을금고 4층 대강당',lat:35.1855,lng:129.0892},
-  {name:'연산제5동 사전투표소',addr:'부산광역시 연제구 거제천로124번길 15',sub:'연산5동행정복지센터 2층 평생학습실',lat:35.1758,lng:129.0745},
-  {name:'연산제6동 사전투표소',addr:'부산광역시 연제구 쌍미천로52번길 2',sub:'연산6동행정복지센터 4층 프로그램실',lat:35.1778,lng:129.0862},
-  {name:'연산제8동 사전투표소',addr:'부산광역시 연제구 과정로 262 302호',sub:'연산8동행정복지센터 3층 프로그램실',lat:35.1745,lng:129.0895},
-  {name:'연산제9동 사전투표소',addr:'부산광역시 연제구 과정로164번길 38',sub:'연산9동행정복지센터 3층 대회의실',lat:35.1695,lng:129.0800},
+  {name:'거제제1동 사전투표소',addr:'부산광역시 연제구 법원북로 88',sub:'거제1동행정복지센터 3층 다목적실'},
+  {name:'거제제2동 사전투표소',addr:'부산광역시 연제구 아시아드대로22번길 19',sub:'거제2동행정복지센터 3층 다목적홀'},
+  {name:'거제제3동 사전투표소',addr:'부산광역시 연제구 거제대로 180',sub:'거제3동행정복지센터 1층 평생학습실'},
+  {name:'거제제4동 사전투표소',addr:'부산광역시 연제구 화지로52번길 33',sub:'거제4동행정복지센터 4층 다목적강당'},
+  {name:'연산제1동 사전투표소',addr:'부산광역시 연제구 연동로8번길 66',sub:'연산1동행정복지센터 3층 대회의실'},
+  {name:'연산제2동 사전투표소',addr:'부산광역시 연제구 연제로 2',sub:'연제구청 2층 대회의실'},
+  {name:'연산제3동 사전투표소',addr:'부산광역시 연제구 연수로208번길 16',sub:'연산3동행정복지센터 4층 대회의실'},
+  {name:'연산제4동 사전투표소',addr:'부산광역시 연제구 쌍미천로141번길 22',sub:'연산로터리새마을금고 4층 대강당'},
+  {name:'연산제5동 사전투표소',addr:'부산광역시 연제구 거제천로124번길 15',sub:'연산5동행정복지센터 2층 평생학습실'},
+  {name:'연산제6동 사전투표소',addr:'부산광역시 연제구 쌍미천로52번길 2',sub:'연산6동행정복지센터 4층 프로그램실'},
+  {name:'연산제8동 사전투표소',addr:'부산광역시 연제구 과정로 262',sub:'연산8동행정복지센터 3층 프로그램실'},
+  {name:'연산제9동 사전투표소',addr:'부산광역시 연제구 과정로164번길 38',sub:'연산9동행정복지센터 3층 대회의실'},
 ];
 
-// ── 사전투표소 마커 ────────────────────────────────────────
-function drawPreMarkers(){
-  PRE_STATIONS.forEach(s=>{
+// ── 주소 → 좌표 (Nominatim) ───────────────────────────────
+async function geocode(addr){
+  try{
+    const r=await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,
+      {headers:{'Accept-Language':'ko','User-Agent':'YeongjinRadiusApp'}}
+    );
+    const d=await r.json();
+    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
+  }catch(e){}
+  return null;
+}
+
+// ── 사전투표소 마커 (주소→좌표 변환 후 표시) ─────────────
+async function loadPreMarkers(){
+  const btn=document.getElementById('preBtn');
+  btn.textContent='⏳';
+  for(const s of PRE_STATIONS){
+    const coord=await geocode(s.addr);
+    if(!coord){console.warn('좌표 없음:',s.addr);continue;}
+    // 100ms 딜레이 (Nominatim 과부하 방지)
+    await new Promise(r=>setTimeout(r,100));
     const m=new naver.maps.Marker({
-      position:new naver.maps.LatLng(s.lat,s.lng),map,
-      icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
+      position:new naver.maps.LatLng(coord.lat,coord.lng),
+      map:null,
+      icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
       zIndex:30
     });
     naver.maps.Event.addListener(m,'click',()=>{
@@ -183,10 +203,17 @@ function drawPreMarkers(){
       document.getElementById('votePopup').classList.add('show');
     });
     preMarkers.push(m);
-  });
+  }
+  preLoaded=true;
+  btn.textContent='🗳';
+  // 로드 완료 후 표시
+  preMarkers.forEach(m=>m.setMap(map));
+  showPre=true;
+  btn.classList.add('on-blue');
 }
 
-function togglePre(){
+async function togglePre(){
+  if(!preLoaded){await loadPreMarkers();return;}
   showPre=!showPre;
   preMarkers.forEach(m=>m.setMap(showPre?map:null));
   document.getElementById('preBtn').classList.toggle('on-blue',showPre);
@@ -224,7 +251,6 @@ function toggleDong(){
   document.getElementById('dongBtn').classList.toggle('on-purple',showDong);
 }
 drawDong();
-drawPreMarkers();
 
 // ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
