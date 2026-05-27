@@ -157,38 +157,30 @@ const API_KEY='2f35c409521eb7f8c33957cc8940eaff7293e97661e67972d65ca487f1562784'
 const SG_ID='20260603';
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 
-// ── 연제구 행정동 실제 경계 ───────────────────────────────
+// ── 연제구 행정동 경계 ────────────────────────────────────
 async function drawDong(){
   try{
     const res=await fetch('https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/hangjeongdong_%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson');
     const gj=await res.json();
     const yeonje=gj.features.filter(f=>{
       const p=f.properties;
-      return (p.SGG_NM&&p.SGG_NM.includes('연제구'))||
-             (p.sigungu&&p.sigungu.includes('연제구'))||
-             (p.adm_nm&&p.adm_nm.includes('연제구'))||
-             (p.SIG_KOR_NM&&p.SIG_KOR_NM.includes('연제구'));
+      return (p.SGG_NM&&p.SGG_NM.includes('연제구'))||(p.sigungu&&p.sigungu.includes('연제구'))||
+             (p.adm_nm&&p.adm_nm.includes('연제구'))||(p.SIG_KOR_NM&&p.SIG_KOR_NM.includes('연제구'));
     });
     yeonje.forEach((f,i)=>{
       const p=f.properties;
-      const rawName=p.adm_nm||p.EMD_NM||p.HJD_NM||p.name||'';
-      const name=rawName.replace(/부산광역시\s*연제구\s*/,'');
+      const name=(p.adm_nm||p.EMD_NM||p.HJD_NM||p.name||'').replace(/부산광역시\s*연제구\s*/,'');
       const color=DONG_COLORS[i%DONG_COLORS.length];
       const geom=f.geometry;
-      const polyCoordsArr=geom.type==='MultiPolygon'?geom.coordinates.map(p=>p[0]):[geom.coordinates[0]];
-      polyCoordsArr.forEach(coordArr=>{
-        const coords=coordArr.map(c=>new naver.maps.LatLng(c[1],c[0]));
-        dongPolygons.push(new naver.maps.Polygon({map,paths:[coords],strokeColor:color,strokeWeight:2,strokeOpacity:0.9,fillColor:color,fillOpacity:0.12}));
+      const arr=geom.type==='MultiPolygon'?geom.coordinates.map(p=>p[0]):[geom.coordinates[0]];
+      arr.forEach(ca=>{
+        dongPolygons.push(new naver.maps.Polygon({map,paths:[ca.map(c=>new naver.maps.LatLng(c[1],c[0]))],strokeColor:color,strokeWeight:2,strokeOpacity:.9,fillColor:color,fillOpacity:.12}));
       });
-      const firstCoords=polyCoordsArr[0].map(c=>new naver.maps.LatLng(c[1],c[0]));
-      const center=firstCoords.reduce((a,c)=>({lat:a.lat+c.lat()/firstCoords.length,lng:a.lng+c.lng()/firstCoords.length}),{lat:0,lng:0});
-      dongLabels.push(new naver.maps.Marker({
-        position:new naver.maps.LatLng(center.lat,center.lng),map,
-        icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},
-        zIndex:5
-      }));
+      const fc=arr[0].map(c=>new naver.maps.LatLng(c[1],c[0]));
+      const ct=fc.reduce((a,c)=>({lat:a.lat+c.lat()/fc.length,lng:a.lng+c.lng()/fc.length}),{lat:0,lng:0});
+      dongLabels.push(new naver.maps.Marker({position:new naver.maps.LatLng(ct.lat,ct.lng),map,icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},zIndex:5}));
     });
-  }catch(e){console.error('행정동 경계 로드 실패:',e);}
+  }catch(e){console.error('행정동 로드 실패:',e);}
 }
 function toggleDong(){
   showDong=!showDong;
@@ -198,45 +190,43 @@ function toggleDong(){
 }
 drawDong();
 
-// ── 주소 → 좌표 변환 ─────────────────────────────────────
+// ── 주소 → 좌표 ───────────────────────────────────────────
 async function geocode(addr){
   try{
-    const res=await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,
-      {headers:{'Accept-Language':'ko'}}
-    );
-    const data=await res.json();
-    if(data&&data.length)return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
+    const d=await r.json();
+    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
   }catch(e){}
   return null;
 }
 
-// ── 투표소 API (3개 프록시 순서대로 시도) ─────────────────
+// ── 투표소 API (무료 프록시 3개 순서대로) ─────────────────
 async function fetchVoteStations(type){
-  const op=type==='pre'
-    ?'getPrePolplcOtlnmapTrnsportInfoInqire'
-    :'getPolplcOtlnmapTrnsportInfoInqire';
+  const op=type==='pre'?'getPrePolplcOtlnmapTrnsportInfoInqire':'getPolplcOtlnmapTrnsportInfoInqire';
   const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
 
   const proxies=[
-    `https://corsproxy.io/?url=${encodeURIComponent(target)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
+    `https://thingproxy.freeboard.io/fetch/${target}`
   ];
 
   for(const proxy of proxies){
     try{
-      console.log('시도 중:', proxy);
+      console.log('프록시 시도:', proxy.split('?')[0]);
       const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
-      if(!res.ok){console.warn('HTTP 오류:', res.status);continue;}
+      if(!res.ok){console.warn('HTTP 오류:',res.status);continue;}
       const text=await res.text();
       let data;
-      try{data=JSON.parse(text);}catch(e){console.warn('JSON 파싱 실패');continue;}
+      try{data=JSON.parse(text);}catch(e){
+        // allorigins는 contents 필드에 감쌀 수 있음
+        try{const w=JSON.parse(text);data=JSON.parse(w.contents);}catch(e2){console.warn('JSON 파싱 실패');continue;}
+      }
       const body=data?.response?.body;
-      if(!body){console.warn('응답 body 없음');continue;}
+      if(!body){console.warn('body 없음');continue;}
       const items=body?.items?.item;
       if(!items){
-        console.log('항목 없음. totalCount:', body?.totalCount);
+        console.log('항목 없음, totalCount:',body?.totalCount);
         return[];
       }
       const list=Array.isArray(items)?items:[items];
@@ -246,14 +236,11 @@ async function fetchVoteStations(type){
         const lng=parseFloat(item.lng||item.wgsLng||0);
         if(!lat||!lng){
           const addr=item.dtlAddr||item.addr||item.abadAddr||'';
-          if(addr){
-            const coord=await geocode(addr);
-            if(coord){item.lat=coord.lat;item.lng=coord.lng;}
-          }
+          if(addr){const c=await geocode(addr);if(c){item.lat=c.lat;item.lng=c.lng;}}
         }
       }
       return list;
-    }catch(e){console.warn('프록시 실패:', proxy, e.message);}
+    }catch(e){console.warn('프록시 실패:',e.message);}
   }
   return[];
 }
@@ -265,18 +252,18 @@ function makeVoteMarker(item,type){
   const isPre=type==='pre';
   const color=isPre?'#2563eb':'#ff4757';
   const icon=isPre?'🗳':'📍';
-  const marker=new naver.maps.Marker({
+  const m=new naver.maps.Marker({
     position:new naver.maps.LatLng(lat,lng),map,
-    icon:{content:`<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:translate(-14px,-14px);cursor:pointer;">${icon}</div>`,anchor:new naver.maps.Point(0,0)},
+    icon:{content:`<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);transform:translate(-14px,-14px);cursor:pointer;">${icon}</div>`,anchor:new naver.maps.Point(0,0)},
     zIndex:30
   });
-  naver.maps.Event.addListener(marker,'click',()=>{
+  naver.maps.Event.addListener(m,'click',()=>{
     document.getElementById('vpType').textContent=isPre?'🗳 사전투표소':'📍 선거일투표소';
     document.getElementById('vpName').textContent=item.polplcNm||item.prepolplcNm||item.polplcSNm||'투표소';
     document.getElementById('vpAddr').textContent=item.dtlAddr||item.addr||item.abadAddr||'주소 정보 없음';
     document.getElementById('votePopup').classList.add('show');
   });
-  return marker;
+  return m;
 }
 
 async function toggleVote(type){
@@ -284,19 +271,18 @@ async function toggleVote(type){
   const showing=type==='pre'?showPre:showDay;
   if(showing){
     (type==='pre'?preMarkers:dayMarkers).forEach(m=>m.setMap(null));
-    if(type==='pre'){showPre=false;preMarkers=[];}
-    else{showDay=false;dayMarkers=[];}
+    if(type==='pre'){showPre=false;preMarkers=[];}else{showDay=false;dayMarkers=[];}
     btn.classList.remove('on-blue','on-red');
     return;
   }
   btn.textContent='⏳';
   const items=await fetchVoteStations(type);
   if(!items.length){
-    alert('투표소 데이터를 불러올 수 없습니다.\n선관위가 아직 연제구 데이터를 미제공 중일 수 있습니다.');
+    alert('투표소 데이터를 불러올 수 없습니다.\n선관위가 연제구 데이터를 아직 미등록했을 수 있습니다.');
     btn.textContent=type==='pre'?'🗳':'📍';
     return;
   }
-  const newMarkers=items.map(item=>makeVoteMarker(item,type)).filter(Boolean);
+  const newMarkers=items.map(i=>makeVoteMarker(i,type)).filter(Boolean);
   if(type==='pre'){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
   else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
   btn.textContent=type==='pre'?'🗳':'📍';
@@ -309,9 +295,9 @@ function startCompass(){
   if(!window.DeviceOrientationEvent)return;
   if(typeof DeviceOrientationEvent.requestPermission==='function'){
     DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrient);});
-  }else{window.addEventListener('deviceorientation',onOrient);}
+  }else window.addEventListener('deviceorientation',onOrient);
 }
-function onOrient(e){let h=e.webkitCompassHeading||e.alpha||0;updateCompass(h);}
+function onOrient(e){updateCompass(e.webkitCompassHeading||e.alpha||0);}
 function setType(t,b){document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));b.classList.add('on');map.setMapTypeId(naver.maps.MapTypeId[t]);}
 function dist(a,b){const R=6371000,r=x=>x*Math.PI/180,dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());return R*2*Math.atan2(Math.sqrt(Math.sin(dLa/2)**2+Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2),Math.sqrt(1-Math.sin(dLa/2)**2-Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2));}
 function eLL(c,r){return new naver.maps.LatLng(c.lat(),c.lng()+(r/(6378137*Math.cos(c.lat()*Math.PI/180)))*(180/Math.PI));}
@@ -337,14 +323,8 @@ function updateMyDot(lat,lng,acc,heading){
   const pos=new naver.maps.LatLng(lat,lng);
   const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
   const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
-  if(!myDot){
-    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
-    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
-    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
-  }else{
-    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
-    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
-  }
+  if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});}
+  else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
@@ -352,8 +332,7 @@ function startTracking(){
   isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();
   watchId=navigator.geolocation.watchPosition(
     pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
-    err=>{alert('위치 추적 실패');stopTracking();},
-    {enableHighAccuracy:true,maximumAge:500,timeout:10000}
+    ()=>stopTracking(),{enableHighAccuracy:true,maximumAge:500,timeout:10000}
   );
 }
 function stopTracking(){isTracking=false;document.getElementById('trackBtn').classList.remove('tracking');if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
@@ -367,11 +346,7 @@ function locateOnce(){
 function upd(p){
   const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
   const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
-  document.getElementById('vR').textContent=f(rM);
-  document.getElementById('vD').textContent=f(rM*2);
-  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
-  document.getElementById('sv').textContent=f(rM);
-  document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
+  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
 [{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
@@ -380,9 +355,7 @@ function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).t
   document.getElementById('ps').appendChild(b);
 });
 function clearAll(){
-  isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');
-  document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');
-  document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
+  isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
   if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
@@ -390,10 +363,10 @@ function clearAll(){
 async function doSearch(){
   const q=document.getElementById('si').value.trim();if(!q)return;
   try{
-    const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
-    const data=await res.json();
-    if(!data||!data.length){alert('검색 결과가 없습니다.');return;}
-    const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
+    const d=await r.json();
+    if(!d||!d.length){alert('검색 결과가 없습니다.');return;}
+    const ll=new naver.maps.LatLng(parseFloat(d[0].lat),parseFloat(d[0].lon));
     map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';
   }catch(e){alert('검색 오류: '+e.message);}
 }
