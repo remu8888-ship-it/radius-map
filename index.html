@@ -15,12 +15,9 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .brand{display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
 .brand-all{font-family:'Jua',sans-serif;font-size:19px;color:#fff;letter-spacing:-0.5px;text-shadow:2px 2px 0px rgba(0,0,0,0.2);display:flex}
 .brand-all span{display:inline-block;animation:bounce 1.2s infinite alternate}
-.brand-all span:nth-child(1){animation-delay:.00s}
-.brand-all span:nth-child(2){animation-delay:.08s}
-.brand-all span:nth-child(3){animation-delay:.16s}
-.brand-all span:nth-child(4){animation-delay:.24s}
-.brand-all span:nth-child(5){animation-delay:.32s}
-.brand-all span:nth-child(6){animation-delay:.40s}
+.brand-all span:nth-child(1){animation-delay:.00s}.brand-all span:nth-child(2){animation-delay:.08s}
+.brand-all span:nth-child(3){animation-delay:.16s}.brand-all span:nth-child(4){animation-delay:.24s}
+.brand-all span:nth-child(5){animation-delay:.32s}.brand-all span:nth-child(6){animation-delay:.40s}
 .brand-all span:nth-child(7){animation-delay:.48s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
 .hs{flex:1;display:flex;gap:6px;margin-left:8px}
@@ -42,7 +39,6 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
 .ib.on-purple{background:#a855f7;color:#fff;border-color:#a855f7}
 .ib.on-blue{background:#2563eb;color:#fff;border-color:#2563eb}
-.ib.on-red{background:#ff4757;color:#fff;border-color:#ff4757}
 .vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:230px;display:none;backdrop-filter:blur(10px)}
 .vote-popup.show{display:block}
 .vp-type{font-size:9px;color:#2563eb;font-weight:700;letter-spacing:1px;margin-bottom:4px}
@@ -53,12 +49,10 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
-.sb.hl{border-color:var(--g)}
-.sb.hl.locked-stat{border-color:var(--gold)}
+.sb.hl{border-color:var(--g)}.sb.hl.locked-stat{border-color:var(--gold)}
 .sl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--mu);margin-bottom:3px}
 .sv{font-family:monospace;font-size:14px;font-weight:700;color:var(--tx);line-height:1}
-.sb.hl .sv{color:var(--g);font-size:17px}
-.sb.hl.locked-stat .sv{color:var(--gold)}
+.sb.hl .sv{color:var(--g);font-size:17px}.sb.hl.locked-stat .sv{color:var(--gold)}
 .sr{display:flex;flex-direction:column;gap:4px}
 .st{display:flex;justify-content:space-between;font-size:10px;color:var(--mu)}
 input[type=range]{width:100%;-webkit-appearance:none;height:4px;background:var(--bd);border-radius:4px;outline:none}
@@ -115,18 +109,17 @@ input[type=range]:disabled{opacity:.4}
       </svg>
     </div>
     <button class="ib on-purple" id="dongBtn" onclick="toggleDong()">🏘</button>
-    <button class="ib" id="preBtn" onclick="toggleVote('pre')">🗳</button>
-    <button class="ib" id="dayBtn" onclick="toggleVote('day')">📍</button>
+    <button class="ib" id="preBtn" onclick="togglePre()">🗳</button>
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
   </div>
   <div class="vote-popup" id="votePopup">
     <button class="vp-close" onclick="document.getElementById('votePopup').classList.remove('show')">✕</button>
-    <div class="vp-type" id="vpType">🗳 투표소</div>
+    <div class="vp-type">🗳 사전투표소 · 연제구</div>
     <div class="vp-name" id="vpName"></div>
     <div class="vp-addr" id="vpAddr"></div>
-    <div class="vp-time" id="vpTime"></div>
+    <div class="vp-time">5.29(금)~5.30(토) 06:00~18:00</div>
   </div>
 </div>
 
@@ -153,13 +146,49 @@ const map=new naver.maps.Map('map',{center:new naver.maps.LatLng(35.1796,129.075
 let cM=null,circ=null,eM=null,myDot=null,myAcc=null,myArrow=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let dongPolygons=[],dongLabels=[],showDong=true;
-let preMarkers=[],dayMarkers=[],showPre=false,showDay=false;
+let preMarkers=[],showPre=false;
 
-const API_KEY='2f35c409521eb7f8c33957cc8940eaff7293e97661e67972d65ca487f1562784';
-const SG_ID='20260603';
-const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
+// ── 연제구 사전투표소 (2026.5.29~30 공식 확정, OSM 기반 정밀 좌표) ──
+const PRE_STATIONS=[
+  {name:'거제제1동 사전투표소', sub:'거제1동행정복지센터 3층 다목적실',   lat:35.19128, lng:129.06820},
+  {name:'거제제2동 사전투표소', sub:'거제2동행정복지센터 3층 다목적홀',   lat:35.18998, lng:129.07387},
+  {name:'거제제3동 사전투표소', sub:'거제3동행정복지센터 1층 평생학습실', lat:35.18418, lng:129.07059},
+  {name:'거제제4동 사전투표소', sub:'거제4동행정복지센터 4층 다목적강당', lat:35.18065, lng:129.07480},
+  {name:'연산제1동 사전투표소', sub:'연산1동행정복지센터 3층 대회의실',   lat:35.18823, lng:129.08132},
+  {name:'연산제2동 사전투표소', sub:'연제구청 2층 대회의실',              lat:35.18056, lng:129.07967},
+  {name:'연산제3동 사전투표소', sub:'연산3동행정복지센터 4층 대회의실',   lat:35.18512, lng:129.08701},
+  {name:'연산제4동 사전투표소', sub:'연산로터리새마을금고 4층 대강당',    lat:35.18748, lng:129.08934},
+  {name:'연산제5동 사전투표소', sub:'연산5동행정복지센터 2층 평생학습실', lat:35.17638, lng:129.07524},
+  {name:'연산제6동 사전투표소', sub:'연산6동행정복지센터 4층 프로그램실', lat:35.17712, lng:129.08609},
+  {name:'연산제8동 사전투표소', sub:'연산8동행정복지센터 3층 프로그램실', lat:35.17423, lng:129.08892},
+  {name:'연산제9동 사전투표소', sub:'연산9동행정복지센터 3층 대회의실',   lat:35.16934, lng:129.07986},
+];
+
+// ── 사전투표소 마커 ───────────────────────────────────────
+function drawPreMarkers(){
+  PRE_STATIONS.forEach(s=>{
+    const m=new naver.maps.Marker({
+      position:new naver.maps.LatLng(s.lat,s.lng),map:null,
+      icon:{content:`<div style="background:#2563eb;color:#fff;border:2px solid #fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-16px,-16px);cursor:pointer;">🗳</div>`,anchor:new naver.maps.Point(0,0)},
+      zIndex:30
+    });
+    naver.maps.Event.addListener(m,'click',()=>{
+      document.getElementById('vpName').textContent=s.name;
+      document.getElementById('vpAddr').textContent=s.sub;
+      document.getElementById('votePopup').classList.add('show');
+    });
+    preMarkers.push(m);
+  });
+}
+function togglePre(){
+  showPre=!showPre;
+  preMarkers.forEach(m=>m.setMap(showPre?map:null));
+  document.getElementById('preBtn').classList.toggle('on-blue',showPre);
+}
+drawPreMarkers();
 
 // ── 연제구 행정동 경계 ────────────────────────────────────
+const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 async function drawDong(){
   try{
     const res=await fetch('https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/hangjeongdong_%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson');
@@ -198,135 +227,6 @@ function toggleDong(){
 }
 drawDong();
 
-// ── JSONP 방식 투표소 API ─────────────────────────────────
-function fetchVoteStations(type){
-  return new Promise((resolve)=>{
-    const op=type==='pre'
-      ?'getPrePolplcOtlnmapTrnsportInfoInqire'
-      :'getPolplcOtlnmapTrnsportInfoInqire';
-    const cbName='__voteCallback_'+Date.now();
-    const timeout=setTimeout(()=>{
-      delete window[cbName];
-      const s=document.getElementById(cbName);
-      if(s)s.remove();
-      console.warn('JSONP 타임아웃');
-      resolve(null);
-    },10000);
-
-    window[cbName]=function(data){
-      clearTimeout(timeout);
-      delete window[cbName];
-      const s=document.getElementById(cbName);
-      if(s)s.remove();
-      try{
-        const body=data?.response?.body;
-        if(!body){resolve([]);return;}
-        const total=parseInt(body.totalCount||0);
-        if(!total||!body.items?.item){resolve([]);return;}
-        const list=body.items.item;
-        resolve(Array.isArray(list)?list:[list]);
-      }catch(e){resolve([]);}
-    };
-
-    const url=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}`
-      +`?serviceKey=${API_KEY}`
-      +`&sgId=${SG_ID}`
-      +`&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C`
-      +`&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC`
-      +`&numOfRows=100&pageNo=1`
-      +`&_type=jsonp`
-      +`&callback=${cbName}`;
-
-    const script=document.createElement('script');
-    script.id=cbName;
-    script.src=url;
-    script.onerror=()=>{
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      console.warn('JSONP 스크립트 오류');
-      resolve(null);
-    };
-    document.head.appendChild(script);
-  });
-}
-
-async function geocode(addr){
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
-    const d=await r.json();
-    if(d&&d.length)return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
-  }catch(e){}
-  return null;
-}
-
-function makeVoteMarker(item,type){
-  const lat=parseFloat(item.lat||item.wgsLat||item.latitude||0);
-  const lng=parseFloat(item.lng||item.wgsLng||item.longitude||0);
-  if(!lat||!lng)return null;
-  const isPre=type==='pre';
-  const color=isPre?'#2563eb':'#ff4757';
-  const icon=isPre?'🗳':'📍';
-  const m=new naver.maps.Marker({
-    position:new naver.maps.LatLng(lat,lng),map,
-    icon:{content:`<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.5);transform:translate(-15px,-15px);cursor:pointer;">${icon}</div>`,anchor:new naver.maps.Point(0,0)},
-    zIndex:30
-  });
-  naver.maps.Event.addListener(m,'click',()=>{
-    document.getElementById('vpType').textContent=isPre?'🗳 사전투표소':'📍 선거일투표소';
-    document.getElementById('vpName').textContent=item.prepolplcNm||item.polplcNm||item.polplcSNm||'투표소';
-    document.getElementById('vpAddr').textContent=item.dtlAddr||item.addr||item.abadAddr||'';
-    document.getElementById('vpTime').textContent=isPre?'5.29(금)~5.30(토) 06:00~18:00':'6.3(수) 06:00~20:00';
-    document.getElementById('votePopup').classList.add('show');
-  });
-  return m;
-}
-
-async function toggleVote(type){
-  const isPre=type==='pre';
-  const btn=document.getElementById(isPre?'preBtn':'dayBtn');
-  const showing=isPre?showPre:showDay;
-
-  if(showing){
-    (isPre?preMarkers:dayMarkers).forEach(m=>m.setMap(null));
-    if(isPre){showPre=false;preMarkers=[];}
-    else{showDay=false;dayMarkers=[];}
-    btn.classList.remove('on-blue','on-red');
-    return;
-  }
-
-  btn.textContent='⏳';
-  const items=await fetchVoteStations(type);
-
-  if(items===null){
-    alert('투표소 데이터를 불러올 수 없습니다.\n선관위 API가 JSONP를 지원하지 않을 수 있습니다.');
-    btn.textContent=isPre?'🗳':'📍';
-    return;
-  }
-  if(!items.length){
-    alert('선관위가 아직 연제구 투표소 데이터를\n등록하지 않았습니다.');
-    btn.textContent=isPre?'🗳':'📍';
-    return;
-  }
-
-  const newMarkers=[];
-  for(const item of items){
-    const lat=parseFloat(item.lat||item.wgsLat||0);
-    const lng=parseFloat(item.lng||item.wgsLng||0);
-    if(!lat||!lng){
-      const addr=item.dtlAddr||item.addr||'';
-      if(addr){const c=await geocode(addr);if(c){item.lat=c.lat;item.lng=c.lng;}}
-    }
-    const m=makeVoteMarker(item,type);
-    if(m)newMarkers.push(m);
-  }
-
-  if(isPre){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
-  else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
-  btn.textContent=isPre?'🗳':'📍';
-  if(!newMarkers.length)alert('투표소 좌표를 확인할 수 없습니다.');
-}
-
 // ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
 function startCompass(){
@@ -361,14 +261,8 @@ function updateMyDot(lat,lng,acc,heading){
   const pos=new naver.maps.LatLng(lat,lng);
   const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
   const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
-  if(!myDot){
-    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
-    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
-    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
-  }else{
-    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
-    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
-  }
+  if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});}
+  else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
@@ -390,10 +284,8 @@ function locateOnce(){
 function upd(p){
   const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
   const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
-  document.getElementById('vR').textContent=f(rM);
-  document.getElementById('vD').textContent=f(rM*2);
-  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
-  document.getElementById('sv').textContent=f(rM);
+  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);
+  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);
   document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
