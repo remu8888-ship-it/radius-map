@@ -211,33 +211,51 @@ async function geocode(addr){
   return null;
 }
 
-// ── 투표소 API (CORS 프록시 + 주소 지오코딩) ──────────────
+// ── 투표소 API (3개 프록시 순서대로 시도) ─────────────────
 async function fetchVoteStations(type){
   const op=type==='pre'
     ?'getPrePolplcOtlnmapTrnsportInfoInqire'
     :'getPolplcOtlnmapTrnsportInfoInqire';
   const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
-  const proxy=`https://corsproxy.io/?url=${encodeURIComponent(target)}`;
-  try{
-    const res=await fetch(proxy);
-    const data=await res.json();
-    const items=data?.response?.body?.items?.item;
-    if(!items)return[];
-    const list=Array.isArray(items)?items:[items];
-    // 좌표 없으면 주소로 지오코딩
-    for(const item of list){
-      const lat=parseFloat(item.lat||item.wgsLat||0);
-      const lng=parseFloat(item.lng||item.wgsLng||0);
-      if(!lat||!lng){
-        const addr=item.dtlAddr||item.addr||item.abadAddr||'';
-        if(addr){
-          const coord=await geocode(addr);
-          if(coord){item.lat=coord.lat;item.lng=coord.lng;}
+
+  const proxies=[
+    `https://corsproxy.io/?url=${encodeURIComponent(target)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`
+  ];
+
+  for(const proxy of proxies){
+    try{
+      console.log('시도 중:', proxy);
+      const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
+      if(!res.ok){console.warn('HTTP 오류:', res.status);continue;}
+      const text=await res.text();
+      let data;
+      try{data=JSON.parse(text);}catch(e){console.warn('JSON 파싱 실패');continue;}
+      const body=data?.response?.body;
+      if(!body){console.warn('응답 body 없음');continue;}
+      const items=body?.items?.item;
+      if(!items){
+        console.log('항목 없음. totalCount:', body?.totalCount);
+        return[];
+      }
+      const list=Array.isArray(items)?items:[items];
+      // 좌표 없으면 주소로 지오코딩
+      for(const item of list){
+        const lat=parseFloat(item.lat||item.wgsLat||0);
+        const lng=parseFloat(item.lng||item.wgsLng||0);
+        if(!lat||!lng){
+          const addr=item.dtlAddr||item.addr||item.abadAddr||'';
+          if(addr){
+            const coord=await geocode(addr);
+            if(coord){item.lat=coord.lat;item.lng=coord.lng;}
+          }
         }
       }
-    }
-    return list;
-  }catch(e){console.error('투표소 API 오류',e);return[];}
+      return list;
+    }catch(e){console.warn('프록시 실패:', proxy, e.message);}
+  }
+  return[];
 }
 
 function makeVoteMarker(item,type){
@@ -274,7 +292,7 @@ async function toggleVote(type){
   btn.textContent='⏳';
   const items=await fetchVoteStations(type);
   if(!items.length){
-    alert('투표소 정보를 불러올 수 없습니다.\n잠시 후 다시 시도해 주세요.');
+    alert('투표소 데이터를 불러올 수 없습니다.\n선관위가 아직 연제구 데이터를 미제공 중일 수 있습니다.');
     btn.textContent=type==='pre'?'🗳':'📍';
     return;
   }
