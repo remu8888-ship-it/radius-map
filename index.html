@@ -45,10 +45,10 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib.on-red{background:#ff4757;color:#fff;border-color:#ff4757}
 .vote-popup{position:absolute;bottom:14px;left:10px;z-index:600;background:rgba(15,17,23,0.95);border:1px solid #2563eb;border-radius:12px;padding:10px 14px;max-width:220px;display:none;backdrop-filter:blur(10px)}
 .vote-popup.show{display:block}
-.vote-popup .vp-type{font-size:9px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.vote-popup .vp-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
-.vote-popup .vp-addr{font-size:10px;color:var(--mu);line-height:1.5}
-.vote-popup .vp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--mu);font-size:14px;cursor:pointer}
+.vp-type{font-size:9px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.vp-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
+.vp-addr{font-size:10px;color:var(--mu);line-height:1.5}
+.vp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--mu);font-size:14px;cursor:pointer}
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
@@ -182,7 +182,11 @@ async function drawDong(){
       });
       const firstCoords=polyCoordsArr[0].map(c=>new naver.maps.LatLng(c[1],c[0]));
       const center=firstCoords.reduce((a,c)=>({lat:a.lat+c.lat()/firstCoords.length,lng:a.lng+c.lng()/firstCoords.length}),{lat:0,lng:0});
-      dongLabels.push(new naver.maps.Marker({position:new naver.maps.LatLng(center.lat,center.lng),map,icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},zIndex:5}));
+      dongLabels.push(new naver.maps.Marker({
+        position:new naver.maps.LatLng(center.lat,center.lng),map,
+        icon:{content:`<div style="background:rgba(12,14,20,0.85);color:${color};border:1px solid ${color};border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">${name}</div>`,anchor:new naver.maps.Point(30,12)},
+        zIndex:5
+      }));
     });
   }catch(e){console.error('행정동 경계 로드 실패:',e);}
 }
@@ -194,9 +198,24 @@ function toggleDong(){
 }
 drawDong();
 
-// ── 투표소 (CORS 프록시 사용) ─────────────────────────────
+// ── 주소 → 좌표 변환 ─────────────────────────────────────
+async function geocode(addr){
+  try{
+    const res=await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=kr`,
+      {headers:{'Accept-Language':'ko'}}
+    );
+    const data=await res.json();
+    if(data&&data.length)return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
+  }catch(e){}
+  return null;
+}
+
+// ── 투표소 API (CORS 프록시 + 주소 지오코딩) ──────────────
 async function fetchVoteStations(type){
-  const op=type==='pre'?'getPrePolplcOtlnmapTrnsportInfoInqire':'getPolplcOtlnmapTrnsportInfoInqire';
+  const op=type==='pre'
+    ?'getPrePolplcOtlnmapTrnsportInfoInqire'
+    :'getPolplcOtlnmapTrnsportInfoInqire';
   const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
   const proxy=`https://corsproxy.io/?url=${encodeURIComponent(target)}`;
   try{
@@ -204,13 +223,26 @@ async function fetchVoteStations(type){
     const data=await res.json();
     const items=data?.response?.body?.items?.item;
     if(!items)return[];
-    return Array.isArray(items)?items:[items];
+    const list=Array.isArray(items)?items:[items];
+    // 좌표 없으면 주소로 지오코딩
+    for(const item of list){
+      const lat=parseFloat(item.lat||item.wgsLat||0);
+      const lng=parseFloat(item.lng||item.wgsLng||0);
+      if(!lat||!lng){
+        const addr=item.dtlAddr||item.addr||item.abadAddr||'';
+        if(addr){
+          const coord=await geocode(addr);
+          if(coord){item.lat=coord.lat;item.lng=coord.lng;}
+        }
+      }
+    }
+    return list;
   }catch(e){console.error('투표소 API 오류',e);return[];}
 }
 
 function makeVoteMarker(item,type){
-  const lat=parseFloat(item.lat||item.latitude||item.wgsLat||0);
-  const lng=parseFloat(item.lng||item.longitude||item.wgsLng||0);
+  const lat=parseFloat(item.lat||item.wgsLat||0);
+  const lng=parseFloat(item.lng||item.wgsLng||0);
   if(!lat||!lng)return null;
   const isPre=type==='pre';
   const color=isPre?'#2563eb':'#ff4757';
@@ -250,12 +282,17 @@ async function toggleVote(type){
   if(type==='pre'){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
   else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
   btn.textContent=type==='pre'?'🗳':'📍';
-  if(!newMarkers.length)alert('연제구 투표소 좌표 데이터가 아직 제공되지 않습니다.');
+  if(!newMarkers.length)alert('연제구 투표소 좌표를 찾을 수 없습니다.');
 }
 
 // ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
-function startCompass(){if(!window.DeviceOrientationEvent)return;if(typeof DeviceOrientationEvent.requestPermission==='function'){DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrient);});}else{window.addEventListener('deviceorientation',onOrient);}}
+function startCompass(){
+  if(!window.DeviceOrientationEvent)return;
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',onOrient);});
+  }else{window.addEventListener('deviceorientation',onOrient);}
+}
 function onOrient(e){let h=e.webkitCompassHeading||e.alpha||0;updateCompass(h);}
 function setType(t,b){document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));b.classList.add('on');map.setMapTypeId(naver.maps.MapTypeId[t]);}
 function dist(a,b){const R=6371000,r=x=>x*Math.PI/180,dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());return R*2*Math.atan2(Math.sqrt(Math.sin(dLa/2)**2+Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2),Math.sqrt(1-Math.sin(dLa/2)**2-Math.cos(r(a.lat()))*Math.cos(r(b.lat()))*Math.sin(dLn/2)**2));}
@@ -282,18 +319,66 @@ function updateMyDot(lat,lng,acc,heading){
   const pos=new naver.maps.LatLng(lat,lng);
   const arrow=`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid #2563eb;transform:translate(-8px,-20px) rotate(${heading}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"></div>`;
   const dot='<div style="width:16px;height:16px;background:#2563eb;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(37,99,235,.3);transform:translate(-8px,-8px)"></div>';
-  if(!myDot){myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});}
-  else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
+  if(!myDot){
+    myDot=new naver.maps.Marker({position:pos,map,icon:{content:dot,anchor:new naver.maps.Point(0,0)},zIndex:20});
+    myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
+    myArrow=new naver.maps.Marker({position:pos,map,icon:{content:arrow,anchor:new naver.maps.Point(0,0)},zIndex:21});
+  }else{
+    myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
+    myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
+  }
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
-function startTracking(){if(!navigator.geolocation){alert('위치 서비스 미지원');return;}isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();watchId=navigator.geolocation.watchPosition(pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},err=>{alert('위치 추적 실패');stopTracking();},{enableHighAccuracy:true,maximumAge:500,timeout:10000});}
+function startTracking(){
+  if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
+  isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();
+  watchId=navigator.geolocation.watchPosition(
+    pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
+    err=>{alert('위치 추적 실패');stopTracking();},
+    {enableHighAccuracy:true,maximumAge:500,timeout:10000}
+  );
+}
 function stopTracking(){isTracking=false;document.getElementById('trackBtn').classList.remove('tracking');if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
-function locateOnce(){if(!navigator.geolocation){alert('위치 서비스 미지원');return;}navigator.geolocation.getCurrentPosition(pos=>{const ll=new naver.maps.LatLng(pos.coords.latitude,pos.coords.longitude);map.setCenter(ll);map.setZoom(15);updateMyDot(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,lastHeading);if(!isLocked)place(ll);},()=>alert('위치를 가져올 수 없습니다.'));}
-function upd(p){const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;}
+function locateOnce(){
+  if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{const ll=new naver.maps.LatLng(pos.coords.latitude,pos.coords.longitude);map.setCenter(ll);map.setZoom(15);updateMyDot(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy,lastHeading);if(!isLocked)place(ll);},
+    ()=>alert('위치를 가져올 수 없습니다.')
+  );
+}
+function upd(p){
+  const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
+  const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
+  document.getElementById('vR').textContent=f(rM);
+  document.getElementById('vD').textContent=f(rM*2);
+  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
+  document.getElementById('sv').textContent=f(rM);
+  document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
+}
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
-[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{const b=document.createElement('button');b.className='pb';b.textContent=p.l;b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=p.v>=1000?(p.v/1000)+' km':p.v+' m';};document.getElementById('ps').appendChild(b);});
-function clearAll(){isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('ci').textContent='중심점을 설정하세요';}
-async function doSearch(){const q=document.getElementById('si').value.trim();if(!q)return;try{const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});const data=await res.json();if(!data||!data.length){alert('검색 결과가 없습니다.');return;}const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';}catch(e){alert('검색 오류: '+e.message);}}
+[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
+  const b=document.createElement('button');b.className='pb';b.textContent=p.l;
+  b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=p.v>=1000?(p.v/1000)+' km':p.v+' m';};
+  document.getElementById('ps').appendChild(b);
+});
+function clearAll(){
+  isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');
+  document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');
+  document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
+  if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}
+  ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('ci').textContent='중심점을 설정하세요';
+}
+async function doSearch(){
+  const q=document.getElementById('si').value.trim();if(!q)return;
+  try{
+    const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
+    const data=await res.json();
+    if(!data||!data.length){alert('검색 결과가 없습니다.');return;}
+    const ll=new naver.maps.LatLng(parseFloat(data[0].lat),parseFloat(data[0].lon));
+    map.setCenter(ll);map.setZoom(15);if(!isLocked)place(ll);document.getElementById('si').value='';
+  }catch(e){alert('검색 오류: '+e.message);}
+}
 startCompass();
 </script>
 </body>
