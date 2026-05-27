@@ -198,41 +198,57 @@ function toggleDong(){
 }
 drawDong();
 
-// ── 투표소 API ────────────────────────────────────────────
-async function fetchVoteStations(type){
-  const op=type==='pre'
-    ?'getPrePolplcOtlnmapTrnsportInfoInqire'
-    :'getPolplcOtlnmapTrnsportInfoInqire';
-  const target=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}?serviceKey=${API_KEY}&sgId=${SG_ID}&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC&numOfRows=100&pageNo=1&_type=json`;
+// ── JSONP 방식 투표소 API ─────────────────────────────────
+function fetchVoteStations(type){
+  return new Promise((resolve)=>{
+    const op=type==='pre'
+      ?'getPrePolplcOtlnmapTrnsportInfoInqire'
+      :'getPolplcOtlnmapTrnsportInfoInqire';
+    const cbName='__voteCallback_'+Date.now();
+    const timeout=setTimeout(()=>{
+      delete window[cbName];
+      const s=document.getElementById(cbName);
+      if(s)s.remove();
+      console.warn('JSONP 타임아웃');
+      resolve(null);
+    },10000);
 
-  const proxies=[
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
-    `https://thingproxy.freeboard.io/fetch/${target}`
-  ];
+    window[cbName]=function(data){
+      clearTimeout(timeout);
+      delete window[cbName];
+      const s=document.getElementById(cbName);
+      if(s)s.remove();
+      try{
+        const body=data?.response?.body;
+        if(!body){resolve([]);return;}
+        const total=parseInt(body.totalCount||0);
+        if(!total||!body.items?.item){resolve([]);return;}
+        const list=body.items.item;
+        resolve(Array.isArray(list)?list:[list]);
+      }catch(e){resolve([]);}
+    };
 
-  for(const proxy of proxies){
-    try{
-      console.log('시도:', proxy.split('?')[0]);
-      const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
-      if(!res.ok)continue;
-      const text=await res.text();
-      let data;
-      try{data=JSON.parse(text);}
-      catch{
-        try{data=JSON.parse(JSON.parse(text).contents);}
-        catch{continue;}
-      }
-      const body=data?.response?.body;
-      if(!body)continue;
-      const totalCount=parseInt(body.totalCount||0);
-      console.log('totalCount:',totalCount);
-      if(!totalCount||!body.items?.item)return[];
-      const list=body.items.item;
-      return Array.isArray(list)?list:[list];
-    }catch(e){console.warn('실패:',e.message);}
-  }
-  return null; // null = 프록시 전체 실패
+    const url=`https://apis.data.go.kr/9760000/PolplcInfoInqireService2/${op}`
+      +`?serviceKey=${API_KEY}`
+      +`&sgId=${SG_ID}`
+      +`&sdName=%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C`
+      +`&wiwName=%EC%97%B0%EC%A0%9C%EA%B5%AC`
+      +`&numOfRows=100&pageNo=1`
+      +`&_type=jsonp`
+      +`&callback=${cbName}`;
+
+    const script=document.createElement('script');
+    script.id=cbName;
+    script.src=url;
+    script.onerror=()=>{
+      clearTimeout(timeout);
+      delete window[cbName];
+      script.remove();
+      console.warn('JSONP 스크립트 오류');
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function geocode(addr){
@@ -269,12 +285,10 @@ function makeVoteMarker(item,type){
 async function toggleVote(type){
   const isPre=type==='pre';
   const btn=document.getElementById(isPre?'preBtn':'dayBtn');
-  const markers=isPre?preMarkers:dayMarkers;
   const showing=isPre?showPre:showDay;
 
-  // 토글 끄기
   if(showing){
-    markers.forEach(m=>m.setMap(null));
+    (isPre?preMarkers:dayMarkers).forEach(m=>m.setMap(null));
     if(isPre){showPre=false;preMarkers=[];}
     else{showDay=false;dayMarkers=[];}
     btn.classList.remove('on-blue','on-red');
@@ -285,30 +299,23 @@ async function toggleVote(type){
   const items=await fetchVoteStations(type);
 
   if(items===null){
-    // 프록시 전체 실패
-    alert('네트워크 오류로 투표소를 불러올 수 없습니다.\n잠시 후 다시 시도해주세요.');
+    alert('투표소 데이터를 불러올 수 없습니다.\n선관위 API가 JSONP를 지원하지 않을 수 있습니다.');
     btn.textContent=isPre?'🗳':'📍';
     return;
   }
-
   if(!items.length){
-    // API 성공했지만 데이터 없음
-    alert('선관위가 아직 연제구 투표소 데이터를\n등록하지 않았습니다.\n선거일에 가까워지면 자동으로 표시됩니다.');
+    alert('선관위가 아직 연제구 투표소 데이터를\n등록하지 않았습니다.');
     btn.textContent=isPre?'🗳':'📍';
     return;
   }
 
-  // 좌표 없는 항목은 지오코딩
   const newMarkers=[];
   for(const item of items){
-    let lat=parseFloat(item.lat||item.wgsLat||0);
-    let lng=parseFloat(item.lng||item.wgsLng||0);
+    const lat=parseFloat(item.lat||item.wgsLat||0);
+    const lng=parseFloat(item.lng||item.wgsLng||0);
     if(!lat||!lng){
       const addr=item.dtlAddr||item.addr||'';
-      if(addr){
-        const c=await geocode(addr);
-        if(c){item.lat=c.lat;item.lng=c.lng;}
-      }
+      if(addr){const c=await geocode(addr);if(c){item.lat=c.lat;item.lng=c.lng;}}
     }
     const m=makeVoteMarker(item,type);
     if(m)newMarkers.push(m);
@@ -317,7 +324,6 @@ async function toggleVote(type){
   if(isPre){preMarkers=newMarkers;showPre=true;btn.classList.add('on-blue');}
   else{dayMarkers=newMarkers;showDay=true;btn.classList.add('on-red');}
   btn.textContent=isPre?'🗳':'📍';
-
   if(!newMarkers.length)alert('투표소 좌표를 확인할 수 없습니다.');
 }
 
