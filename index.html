@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>영진 반경측정기</title>
+<title>영진반경측정기</title>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -12,20 +12,31 @@
 html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 header{height:52px;background:var(--g);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:999}
-.brand{display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
-.brand-yj{font-family:'Jua',sans-serif;font-size:19px;color:#fff;letter-spacing:-0.5px;text-shadow:2px 2px 0px rgba(0,0,0,0.2)}
-.brand-yj span{display:inline-block;animation:bounce 1.2s infinite alternate}
-.brand-yj span:nth-child(2){animation-delay:.15s}
+.brand{display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
+.brand-all{
+  font-family:'Jua',sans-serif;
+  font-size:19px;
+  color:#fff;
+  letter-spacing:-0.5px;
+  text-shadow:2px 2px 0px rgba(0,0,0,0.2);
+  display:flex;
+}
+.brand-all span{display:inline-block;animation:bounce 1.2s infinite alternate}
+.brand-all span:nth-child(1){animation-delay:.00s}
+.brand-all span:nth-child(2){animation-delay:.08s}
+.brand-all span:nth-child(3){animation-delay:.16s}
+.brand-all span:nth-child(4){animation-delay:.24s}
+.brand-all span:nth-child(5){animation-delay:.32s}
+.brand-all span:nth-child(6){animation-delay:.40s}
+.brand-all span:nth-child(7){animation-delay:.48s}
+.brand-all span:nth-child(8){animation-delay:.56s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
-.brand-sub{font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.3px}
-.hs{flex:1;display:flex;gap:6px;margin-left:6px}
+.hs{flex:1;display:flex;gap:6px;margin-left:8px}
 .hs input{flex:1;padding:7px 12px;border-radius:20px;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:13px;outline:none;min-width:0}
 .hs input::placeholder{color:rgba(255,255,255,.6)}
 .hs button{padding:7px 14px;background:#fff;color:var(--g2);border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 #mw{flex:1;position:relative;min-height:0}
 #map{width:100%;height:100%}
-.hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(12,14,20,.85);backdrop-filter:blur(8px);border:1px solid rgba(3,199,90,.35);border-radius:20px;padding:7px 16px;font-size:11px;color:rgba(255,255,255,.8);z-index:500;pointer-events:none;white-space:nowrap;transition:opacity .3s}
-.hint.off{opacity:0}
 .lock-badge{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:500;background:var(--gold);color:#000;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;pointer-events:none;display:none}
 .lock-badge.show{display:block}
 .tbs{position:absolute;top:12px;right:10px;z-index:500;display:flex;flex-direction:column;gap:3px}
@@ -37,25 +48,6 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .ib{width:40px;height:40px;background:rgba(12,14,20,.9);border:1px solid var(--bd);border-radius:50%;color:var(--g);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all .2s;flex-shrink:0}
 .ib.tracking{background:var(--g);color:#fff;border-color:var(--g)}
 .ib.locked{background:var(--gold);color:#000;border-color:var(--gold)}
-
-/* 위치 정보 바 - 네이버 그린 계열로 */
-.cb{
-  position:absolute;bottom:14px;left:10px;z-index:500;
-  background:linear-gradient(135deg,rgba(3,199,90,0.22),rgba(3,199,90,0.10));
-  border:1px solid rgba(3,199,90,0.45);
-  backdrop-filter:blur(10px);
-  border-radius:10px;
-  padding:7px 12px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:10px;
-  color:#c8ffd4;
-  pointer-events:none;
-  line-height:1.7;
-  letter-spacing:0.2px;
-  box-shadow:0 2px 12px rgba(3,199,90,0.15);
-}
-.cb-label{font-size:8px;color:rgba(3,199,90,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
-
 #panel{background:var(--card);border-top:2px solid var(--g);flex-shrink:0;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .sb{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px}
@@ -83,8 +75,9 @@ input[type=range]:disabled{opacity:.4}
 <div id="app">
 <header>
   <div class="brand">
-    <div class="brand-yj"><span>영</span><span>진</span></div>
-    <div class="brand-sub">반경측정기</div>
+    <div class="brand-all">
+      <span>영</span><span>진</span><span>반</span><span>경</span><span>측</span><span>정</span><span>기</span>
+    </div>
   </div>
   <div class="hs">
     <input type="text" id="si" placeholder="주소·장소 검색…" onkeydown="if(event.key==='Enter')doSearch()">
@@ -94,7 +87,6 @@ input[type=range]:disabled{opacity:.4}
 
 <div id="mw">
   <div id="map"></div>
-  <div class="hint" id="hint">지도를 터치하거나 주소를 검색하세요</div>
   <div class="lock-badge" id="lockBadge">🔒 반경 고정됨</div>
 
   <div class="tbs">
@@ -125,13 +117,6 @@ input[type=range]:disabled{opacity:.4}
     <button class="ib" id="lockBtn" onclick="toggleLock()">🔓</button>
     <button class="ib" id="trackBtn" onclick="toggleTracking()">◎</button>
     <button class="ib" onclick="locateOnce()">⊕</button>
-  </div>
-
-  <div class="cb" id="cb">
-    <div class="cb-label">내 위치</div>
-    <div id="cbLat">위도 —</div>
-    <div id="cbLng">경도 —</div>
-    <div id="cbAcc">정확도 —</div>
   </div>
 </div>
 
@@ -184,7 +169,6 @@ function place(pos){
   eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
   naver.maps.Event.addListener(cM,'drag',e=>{if(isLocked)return;circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord);});
   naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(dist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});
-  document.getElementById('hint').classList.add('off');
   upd(pos);
 }
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
@@ -200,9 +184,6 @@ function updateMyDot(lat,lng,acc,heading){
     myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);
     myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});
   }
-  document.getElementById('cbLat').textContent=`위도  ${lat.toFixed(5)}°N`;
-  document.getElementById('cbLng').textContent=`경도  ${lng.toFixed(5)}°E`;
-  document.getElementById('cbAcc').textContent=`정확도 ±${Math.round(acc)}m`;
 }
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
@@ -225,7 +206,11 @@ function locateOnce(){
 function upd(p){
   const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';
   const fa=m=>m>=1e6?(m/1e6).toFixed(2)+' km²':m>=10000?(m/10000).toFixed(1)+' ha':Math.round(m)+' m²';
-  document.getElementById('vR').textContent=f(rM);document.getElementById('vD').textContent=f(rM*2);document.getElementById('vA').textContent=fa(Math.PI*rM*rM);document.getElementById('sv').textContent=f(rM);document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
+  document.getElementById('vR').textContent=f(rM);
+  document.getElementById('vD').textContent=f(rM*2);
+  document.getElementById('vA').textContent=fa(Math.PI*rM*rM);
+  document.getElementById('sv').textContent=f(rM);
+  document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);const f=m=>m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';document.getElementById('sv').textContent=f(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
 [{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
@@ -237,7 +222,7 @@ function clearAll(){
   isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');document.getElementById('sl').disabled=false;document.querySelectorAll('.pb').forEach(b=>b.disabled=false);
   if(cM){cM.setMap(null);circ.setMap(null);eM.setMap(null);cM=circ=eM=null;}
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
-  document.getElementById('ci').textContent='중심점을 설정하세요';document.getElementById('hint').classList.remove('off');
+  document.getElementById('ci').textContent='중심점을 설정하세요';
 }
 async function doSearch(){
   const q=document.getElementById('si').value.trim();if(!q)return;
