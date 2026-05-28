@@ -159,14 +159,13 @@ const map=new naver.maps.Map('map',{
 
 let cM=null,circ=null,eM=null;
 let myDot=null,myAcc=null,myArrow=null;
-let myLine=null,myLineLbl=null; // 내위치→중심 점선
+let myLine=null,myLineLbl=null;
 let rM=500,watchId=null,isTracking=false,isLocked=false,lastHeading=0;
 let myLat=null,myLng=null;
 let dongPolygons=[],showDong=true;
 const markers={pre:[],day:[]};
 const showing={pre:true,day:true};
 
-// ── 거리 계산 ─────────────────────────────────────────────
 function calcDist(a,b){
   const R=6371000,r=x=>x*Math.PI/180;
   const dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());
@@ -177,44 +176,28 @@ function calcDist(a,b){
 }
 function fmtDist(m){return m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';}
 
-// ── 내위치→중심 점선 + 거리 라벨 ────────────────────────
 function updateMyLine(){
   if(!cM||myLat===null){clearMyLine();return;}
   const cPos=cM.getPosition();
   const mPos=new naver.maps.LatLng(myLat,myLng);
   const d=calcDist(mPos,cPos);
-
-  // 점선
   if(!myLine){
     myLine=new naver.maps.Polyline({
       map,path:[mPos,cPos],
       strokeColor:'#f59e0b',strokeWeight:2,
       strokeStyle:'dash',strokeOpacity:.9
     });
-  }else{
-    myLine.setPath([mPos,cPos]);
-    myLine.setMap(map);
-  }
-
-  // 중간점 라벨
+  }else{myLine.setPath([mPos,cPos]);myLine.setMap(map);}
   const midLat=(myLat+cPos.lat())/2;
   const midLng=(myLng+cPos.lng())/2;
-  const labelContent=`<div style="background:rgba(12,14,20,0.88);color:#f59e0b;border:1px solid #f59e0b;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;">📏 ${fmtDist(d)}</div>`;
+  const lc=`<div style="background:rgba(12,14,20,0.88);color:#f59e0b;border:1px solid #f59e0b;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;">📏 ${fmtDist(d)}</div>`;
   if(!myLineLbl){
-    myLineLbl=new naver.maps.Marker({
-      position:new naver.maps.LatLng(midLat,midLng),map,
-      icon:{content:labelContent,anchor:new naver.maps.Point(30,12)},
-      zIndex:50
-    });
-  }else{
-    myLineLbl.setPosition(new naver.maps.LatLng(midLat,midLng));
-    myLineLbl.setIcon({content:labelContent,anchor:new naver.maps.Point(30,12)});
-    myLineLbl.setMap(map);
-  }
+    myLineLbl=new naver.maps.Marker({position:new naver.maps.LatLng(midLat,midLng),map,icon:{content:lc,anchor:new naver.maps.Point(30,12)},zIndex:50});
+  }else{myLineLbl.setPosition(new naver.maps.LatLng(midLat,midLng));myLineLbl.setIcon({content:lc,anchor:new naver.maps.Point(30,12)});myLineLbl.setMap(map);}
 }
 function clearMyLine(){
-  if(myLine){myLine.setMap(null);}
-  if(myLineLbl){myLineLbl.setMap(null);}
+  if(myLine)myLine.setMap(null);
+  if(myLineLbl)myLineLbl.setMap(null);
 }
 
 // ── 사전투표소 ────────────────────────────────────────────
@@ -246,8 +229,9 @@ const DAY=[
   {name:'거제제2동제2투', bld:'창신초등학교 1층 현관로비',               addr:'부산광역시 연제구 종합운동장로12번길 15'},
   {name:'거제제2동제3투', bld:'거제종합사회복지관 3층 세미나실',         addr:'부산광역시 연제구 아시아드대로46번길 45'},
   {name:'거제제2동제4투', bld:'거제여자중학교 1층 정문로비',             addr:'부산광역시 연제구 금용로 43'},
-  {name:'거제제2동제5투', bld:'레이카운티 1단지 커뮤니티센터',          addr:'부산광역시 연제구 아시아드대로 39'},
-  {name:'거제제2동제6투', bld:'레이카운티 2단지 커뮤니티센터',          addr:'부산광역시 연제구 아시아드대로 39'},
+  // ✅ 레이카운티 1단지/2단지 분리
+  {name:'거제제2동제5투', bld:'레이카운티아파트 1단지 커뮤니티센터 P1층 입주민카페', addr:'부산광역시 연제구 아시아드대로 39'},
+  {name:'거제제2동제6투', bld:'레이카운티아파트 2단지 커뮤니티센터 2층 입주민카페',  addr:'부산광역시 연제구 아시아드대로 57'},
   {name:'거제제3동제1투', bld:'연제구 육아종합지원센터 4층 다목적강당',  addr:'부산광역시 연제구 거제대로124번길 22'},
   {name:'거제제3동제2투', bld:'거제3동행정복지센터 1층 평생학습실',      addr:'부산광역시 연제구 거제대로 180'},
   {name:'거제제3동제3투', bld:'나라키움 부산통합청사 2층 대강당',        addr:'부산광역시 연제구 거제대로 222'},
@@ -307,7 +291,7 @@ function geocodeNaver(addr){
   });
 }
 
-// ── 투표소 마커 (핀 15px) ─────────────────────────────────
+// ── 투표소 마커 ───────────────────────────────────────────
 function makeVoteMarker(s,type){
   const isPre=type==='pre';
   const color=isPre?'#2563eb':'#ff4757';
@@ -324,10 +308,7 @@ function makeVoteMarker(s,type){
     document.getElementById('vpName').textContent=s.name;
     document.getElementById('vpBld').textContent=s.bld;
     document.getElementById('vpAddr').textContent=s.addr;
-    // ✅ 선거일투표소 시간 수정
     document.getElementById('vpTime').textContent=isPre?'5.29(금)~5.30(토) 06:00~18:00':'6.3(수) 06:00~18:00';
-
-    // 내위치 → 투표소 거리
     const vPos=m.getPosition();
     if(myLat!==null&&myLng!==null){
       const d=calcDist(new naver.maps.LatLng(myLat,myLng),vPos);
@@ -335,8 +316,6 @@ function makeVoteMarker(s,type){
     }else{
       document.getElementById('vpDist').textContent='📏 내 위치 미확인 (⊕ 버튼 눌러주세요)';
     }
-
-    // 반경 100m 자동 표시
     if(!isLocked){
       rM=100;
       document.getElementById('sl').value=100;
@@ -423,11 +402,9 @@ function place(pos){
   eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
   naver.maps.Event.addListener(cM,'drag',e=>{if(isLocked)return;circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord);updateMyLine();});
   naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(calcDist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});
-  upd(pos);
-  updateMyLine();
+  upd(pos);updateMyLine();
 }
-naver.maps.Event.addListener(map,'click',e=>{if(!isLocked){place(e.coord);}});
-
+naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
 function updateMyDot(lat,lng,acc,heading){
   myLat=lat;myLng=lng;
   const pos=new naver.maps.LatLng(lat,lng);
@@ -437,7 +414,6 @@ function updateMyDot(lat,lng,acc,heading){
   else{myDot.setPosition(pos);myAcc.setCenter(pos);myAcc.setRadius(acc);myArrow.setPosition(pos);myArrow.setIcon({content:arrow,anchor:new naver.maps.Point(0,0)});}
   updateMyLine();
 }
-
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
