@@ -140,7 +140,7 @@ input[type=range]:disabled{opacity:.4}
   </div>
   <div class="sr">
     <div class="st"><span>반경 조절</span><span id="sv">500 m</span></div>
-    <input type="range" id="sl" min="100" max="50000" step="100" value="500" oninput="onSl(this.value)">
+    <input type="range" id="sl" min="90" max="50000" step="10" value="500" oninput="onSl(this.value)">
   </div>
   <div class="br">
     <div class="ps" id="ps"></div>
@@ -216,7 +216,7 @@ const PRE=[
   {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 과정로164번길 38'},
 ];
 
-// ── 선거일투표소 (레이카운티 1·2단지 좌표 직접 내장) ──────
+// ── 선거일투표소 ──────────────────────────────────────────
 const DAY=[
   {name:'거제제1동제1투', bld:'연제구 보훈회관 3층 다목적홀',            addr:'부산광역시 연제구 명륜로2번길 9'},
   {name:'거제제1동제2투', bld:'동래세무서 별관 1층 로비',                addr:'부산광역시 연제구 거제천로269번길 16'},
@@ -229,9 +229,8 @@ const DAY=[
   {name:'거제제2동제2투', bld:'창신초등학교 1층 현관로비',               addr:'부산광역시 연제구 종합운동장로12번길 15'},
   {name:'거제제2동제3투', bld:'거제종합사회복지관 3층 세미나실',         addr:'부산광역시 연제구 아시아드대로46번길 45'},
   {name:'거제제2동제4투', bld:'거제여자중학교 1층 정문로비',             addr:'부산광역시 연제구 금용로 43'},
-  // ✅ 레이카운티 1·2단지 좌표 직접 내장
-  {name:'거제제2동제5투', bld:'레이카운티아파트 1단지 커뮤니티센터 P1층 입주민카페', addr:'부산광역시 연제구 아시아드대로 39', lat:35.18701, lng:129.07198},
-  {name:'거제제2동제6투', bld:'레이카운티아파트 2단지 커뮤니티센터 2층 입주민카페',  addr:'부산광역시 연제구 아시아드대로 39', lat:35.18812, lng:129.07389},
+  {name:'거제제2동제5투', bld:'레이카운티아파트 1단지 커뮤니티센터 P1층 입주민카페', addr:'부산광역시 연제구 아시아드대로 39', lat:35.18871, lng:129.06445},
+  {name:'거제제2동제6투', bld:'레이카운티아파트 2단지 커뮤니티센터 2층 입주민카페',  addr:'부산광역시 연제구 아시아드대로 39', lat:35.18883, lng:129.06660},
   {name:'거제제3동제1투', bld:'연제구 육아종합지원센터 4층 다목적강당',  addr:'부산광역시 연제구 거제대로124번길 22'},
   {name:'거제제3동제2투', bld:'거제3동행정복지센터 1층 평생학습실',      addr:'부산광역시 연제구 거제대로 180'},
   {name:'거제제3동제3투', bld:'나라키움 부산통합청사 2층 대강당',        addr:'부산광역시 연제구 거제대로 222'},
@@ -279,7 +278,6 @@ const DAY=[
   {name:'연산제9동제9투', bld:'센텀수영강푸르지오 1층 경로당',           addr:'부산광역시 연제구 고분로 270'},
 ];
 
-// ── 네이버 Geocoding ──────────────────────────────────────
 function geocodeNaver(addr){
   return new Promise(resolve=>{
     naver.maps.Service.geocode({query:addr},(status,res)=>{
@@ -291,7 +289,6 @@ function geocodeNaver(addr){
   });
 }
 
-// ── 투표소 마커 ───────────────────────────────────────────
 function makeVoteMarker(s,type){
   const isPre=type==='pre';
   const color=isPre?'#2563eb':'#ff4757';
@@ -329,14 +326,10 @@ function makeVoteMarker(s,type){
   return m;
 }
 
-// ── 마커 로드 (좌표 직접 내장된 경우 geocode 생략) ─────────
 async function initMarkers(type){
   const data=type==='pre'?PRE:DAY;
   for(const s of data){
-    if(s.lat&&s.lng){
-      markers[type].push(makeVoteMarker(s,type));
-      continue;
-    }
+    if(s.lat&&s.lng){markers[type].push(makeVoteMarker(s,type));continue;}
     const coord=await geocodeNaver(s.addr);
     if(!coord){console.warn('geocode 실패:',s.addr);continue;}
     s.lat=coord.lat;s.lng=coord.lng;
@@ -352,7 +345,6 @@ function toggleMarkers(type){
 initMarkers('pre');
 initMarkers('day');
 
-// ── 연제구 행정동 경계 ────────────────────────────────────
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 async function drawDong(){
   try{
@@ -381,7 +373,6 @@ function toggleDong(){
 }
 drawDong();
 
-// ── 나침반 ────────────────────────────────────────────────
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
 function startCompass(){
   if(!window.DeviceOrientationEvent)return;
@@ -406,7 +397,7 @@ function place(pos){
   circ=new naver.maps.Circle({map,center:pos,radius:rM,strokeColor:'#03C75A',strokeWeight:2,strokeStyle:'dash',strokeOpacity:.9,fillColor:'#03C75A',fillOpacity:.08});
   eM=new naver.maps.Marker({position:eLL(pos,rM),map,icon:{content:'<div style="width:16px;height:16px;background:#fff;border:3px solid #2563eb;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.3);transform:translate(-8px,-8px);cursor:ew-resize"></div>',anchor:new naver.maps.Point(0,0)},draggable:true});
   naver.maps.Event.addListener(cM,'drag',e=>{if(isLocked)return;circ.setCenter(e.coord);eM.setPosition(eLL(e.coord,rM));upd(e.coord);updateMyLine();});
-  naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(50,Math.min(50000,Math.round(calcDist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});
+  naver.maps.Event.addListener(eM,'drag',e=>{if(isLocked)return;const c=cM.getPosition();rM=Math.max(90,Math.min(50000,Math.round(calcDist(c,e.coord))));circ.setRadius(rM);document.getElementById('sl').value=rM;upd(c);});
   upd(pos);updateMyLine();
 }
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
@@ -451,11 +442,14 @@ function upd(p){
   document.getElementById('ci').textContent=`중심: ${p.lat().toFixed(5)}°N, ${p.lng().toFixed(5)}°E`;
 }
 function onSl(v){if(isLocked)return;rM=parseInt(v);document.getElementById('sv').textContent=fmtDist(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
-[{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
+
+// ✅ 프리셋 버튼 90m·100m 추가
+[{l:'90m',v:90},{l:'100m',v:100},{l:'200m',v:200},{l:'500m',v:500},{l:'1km',v:1000},{l:'3km',v:3000},{l:'5km',v:5000},{l:'10km',v:10000}].forEach(p=>{
   const b=document.createElement('button');b.className='pb';b.textContent=p.l;
   b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=fmtDist(p.v);};
   document.getElementById('ps').appendChild(b);
 });
+
 function clearAll(){
   isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');
   document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');
