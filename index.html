@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>영진반경측정기</title>
-<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u&submodules=geocoder,search"></script>
+<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u&submodules=geocoder"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -136,7 +136,7 @@ input[type=range]:disabled{opacity:.4}
       <div class="help-row"><div class="help-icon">🏘</div><div class="help-text"><b>행정동 버튼</b> → 연제구 12개 행정동 경계 표시/숨기기</div></div>
       <div class="help-row"><div class="help-icon">🔓</div><div class="help-text"><b>자물쇠 버튼</b> → 반경 고정 (실수로 움직이지 않도록)</div></div>
       <div class="help-row"><div class="help-icon">🗺</div><div class="help-text"><b>지도 종류</b> → 일반·위성·지형·혼합 선택</div></div>
-      <div class="help-row"><div class="help-icon">🔍</div><div class="help-text"><b>주소·장소 검색</b> → 주소 또는 장소명으로 검색<br><span class="sub">띄어쓰기 오류가 있어도 검색됩니다</span></div></div>
+      <div class="help-row"><div class="help-icon">🔍</div><div class="help-text"><b>주소·장소 검색</b> → 아파트명·학교·기관명 등 장소명으로도 검색 가능<br><span class="sub">띄어쓰기 오류가 있어도 검색됩니다</span></div></div>
       <div class="help-row"><div class="help-icon">🗑</div><div class="help-text"><b>초기화</b> → 중심점과 반경을 모두 지웁니다</div></div>
     </div>
     <div class="help-tip"><b>💡 투표소 활용 팁</b><br>⊕ 버튼으로 내 위치를 먼저 설정한 후 투표소 핀을 터치하면 투표소까지의 거리를 바로 확인할 수 있습니다.</div>
@@ -200,7 +200,6 @@ input[type=range]:disabled{opacity:.4}
   </div>
   <div class="br">
     <div class="ps" id="ps"></div>
-    <!-- ✅ 초기화 문구 복원 -->
     <button class="clr" onclick="clearAll()">🗑 초기화</button>
   </div>
   <div class="ci" id="ci">중심점을 설정하세요</div>
@@ -329,7 +328,7 @@ const DAY=[
   {name:'연산제9동제9투', bld:'센텀수영강푸르지오 1층 경로당',           addr:'부산광역시 연제구 고분로 270'},
 ];
 
-// ── Geocoding (주소 변환) ─────────────────────────────────
+// ── 네이버 Geocoding (주소 전용) ──────────────────────────
 function geocodeNaver(addr){
   return new Promise(resolve=>{
     naver.maps.Service.geocode({query:addr},(status,res)=>{
@@ -340,17 +339,21 @@ function geocodeNaver(addr){
   });
 }
 
-// ── 장소 검색 (네이버 Places API) ───────────────────────
-function searchPlace(query){
-  return new Promise(resolve=>{
-    naver.maps.Service.searchCoordToAddress
-    // Places 검색
-    naver.maps.Service.geocode({query:query+' 부산'},(status,res)=>{
-      if(status===naver.maps.Service.Status.OK&&res.v2?.addresses?.length>0){
-        const r=res.v2.addresses[0];resolve({lat:parseFloat(r.y),lng:parseFloat(r.x)});
-      }else resolve(null);
-    });
-  });
+// ── 카카오 장소 검색 (장소명 전용) ───────────────────────
+async function kakaoSearch(query){
+  try{
+    const r=await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=5`,
+      {headers:{'Authorization':'KakaoAK 609acf72a7b76934bf9755fbcd2aac74'}}
+    );
+    const d=await r.json();
+    if(d.documents&&d.documents.length){
+      // 부산 결과 우선
+      const hit=d.documents.find(x=>(x.address_name||'').includes('부산'))||d.documents[0];
+      return {lat:parseFloat(hit.y),lng:parseFloat(hit.x)};
+    }
+  }catch(e){}
+  return null;
 }
 
 function makeVoteMarker(s,type){
@@ -500,8 +503,6 @@ function onSl(v){
   document.getElementById('sv').textContent=fmtDist(rM);
   if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}
 }
-
-// ✅ 프리셋 버튼: 50m·90m·100m·200m 만
 [{l:'50m',v:50},{l:'90m',v:90},{l:'100m',v:100},{l:'200m',v:200}].forEach(p=>{
   const b=document.createElement('button');b.className='pb';b.textContent=p.l;
   b.onclick=()=>{
@@ -514,7 +515,6 @@ function onSl(v){
   };
   document.getElementById('ps').appendChild(b);
 });
-
 function clearAll(){
   isLocked=false;document.getElementById('lockBtn').textContent='🔓';document.getElementById('lockBtn').classList.remove('locked');
   document.getElementById('lockBadge').classList.remove('show');document.getElementById('statR').classList.remove('locked-stat');
@@ -525,18 +525,12 @@ function clearAll(){
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
 
-// ── 검색: 네이버 장소검색(1순위) → Geocoding(2순위) → Nominatim(3순위) ──
-function naverPlaceSearch(query){
-  return new Promise(resolve=>{
-    naver.maps.Service.geocode({
-      query: query
-    },(status,res)=>{
-      if(status===naver.maps.Service.Status.OK&&res.v2?.addresses?.length>0){
-        const r=res.v2.addresses[0];
-        resolve({lat:parseFloat(r.y),lng:parseFloat(r.x)});
-      }else resolve(null);
-    });
-  });
+// ── 검색: 카카오(장소명) → 네이버Geocoding(주소) → Nominatim 순 ──
+function moveToResult(lat,lng,zoom){
+  const ll=new naver.maps.LatLng(lat,lng);
+  map.setCenter(ll);map.setZoom(zoom);
+  if(!isLocked)place(ll);
+  document.getElementById('si').value='';
 }
 
 async function doSearch(){
@@ -544,31 +538,22 @@ async function doSearch(){
   if(!raw)return;
   const q=raw.replace(/\s+/g,' ').trim();
 
-  // 검색어 변형 목록 (주소 + 장소명 모두 커버)
-  const tries=[
-    q,
-    q+' 부산',
-    '부산 '+q,
-    '부산 연제구 '+q,
-    q+' 연제구 부산',
-    // 붙여쓰기 허용
-    q.replace(/\s/g,''),
-    // 숫자-한글 공백 보정
-    q.replace(/(\d)([가-힣])/g,'$1 $2').replace(/([가-힣])(\d)/g,'$1 $2'),
-  ];
+  // 1순위: 카카오 장소 검색 (아파트·학교·기관명 등 장소명에 강함)
+  const kakaoResult=await kakaoSearch(q+' 부산');
+  if(kakaoResult){moveToResult(kakaoResult.lat,kakaoResult.lng,17);return;}
 
-  // 1순위: 네이버 Geocoding (모든 변형 시도)
-  for(const query of [...new Set(tries)]){
+  // 2순위: 네이버 Geocoding (도로명 주소에 강함)
+  const addrTries=[q, q+' 부산', '부산 '+q, '부산 연제구 '+q,
+    q.replace(/(\d)([가-힣])/g,'$1 $2'),
+    q.replace(/([가-힣])(\d)/g,'$1 $2'),
+  ];
+  for(const query of [...new Set(addrTries)]){
     const r=await geocodeNaver(query);
-    if(r){
-      const ll=new naver.maps.LatLng(r.lat,r.lng);
-      map.setCenter(ll);map.setZoom(17);if(!isLocked)place(ll);
-      document.getElementById('si').value='';return;
-    }
+    if(r){moveToResult(r.lat,r.lng,17);return;}
   }
 
-  // 2순위: Nominatim (장소명 검색 보조)
-  for(const query of [q, q+' 부산', '부산 연제구 '+q]){
+  // 3순위: Nominatim 보조
+  for(const query of [q+' 부산', '부산 연제구 '+q, q]){
     try{
       const r=await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,
@@ -576,10 +561,8 @@ async function doSearch(){
       );
       const d=await r.json();
       if(d&&d.length){
-        const hit=d.find(x=>x.display_name?.includes('부산'))||d[0];
-        const ll=new naver.maps.LatLng(parseFloat(hit.lat),parseFloat(hit.lon));
-        map.setCenter(ll);map.setZoom(16);if(!isLocked)place(ll);
-        document.getElementById('si').value='';return;
+        const hit=d.find(x=>(x.display_name||'').includes('부산'))||d[0];
+        moveToResult(parseFloat(hit.lat),parseFloat(hit.lon),16);return;
       }
     }catch(e){}
     await new Promise(r=>setTimeout(r,80));
