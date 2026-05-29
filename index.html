@@ -1,4 +1,4 @@
-<!DOCTYPE html
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -252,28 +252,20 @@ function updCoord(p){
   document.getElementById('ci').innerHTML=`위도 <span>${lat}°N</span> &nbsp;|&nbsp; 경도 <span>${lng}°E</span>`;
 }
 
-// ── 내 위치 아이콘 (원+화살표 통합) ─────────────────────
+// ── 내 위치 아이콘: SVG 원+삼각형 완전 통합 ─────────────
 function makeMyDotContent(heading){
   return `
-    <div style="position:relative;width:40px;height:52px;transform:translate(-20px,-26px);">
-      <div style="
-        position:absolute;top:0;left:50%;
-        width:0;height:0;
-        border-left:9px solid transparent;
-        border-right:9px solid transparent;
-        border-bottom:18px solid #2563eb;
-        transform:translateX(-50%) rotate(${heading}deg);
-        transform-origin:50% 100%;
-        filter:drop-shadow(0 1px 4px rgba(0,0,0,.35));
-      "></div>
-      <div style="
-        position:absolute;bottom:0;left:50%;transform:translateX(-50%);
-        width:24px;height:24px;
-        background:#2563eb;
-        border:3px solid #fff;
-        border-radius:50%;
-        box-shadow:0 0 0 4px rgba(37,99,235,.3);
-      "></div>
+    <div style="width:44px;height:44px;transform:translate(-22px,-22px) rotate(${heading}deg);transform-origin:center center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));">
+      <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+        <!-- 정확도 배경 원 -->
+        <circle cx="22" cy="22" r="20" fill="rgba(37,99,235,0.15)" stroke="rgba(37,99,235,0.25)" stroke-width="1"/>
+        <!-- 원 둘레에 붙은 삼각형 (위쪽, 원과 맞닿음) -->
+        <polygon points="22,2 16,13 28,13" fill="#2563eb" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        <!-- 파란 내 위치 원 (삼각형 밑면과 맞닿음) -->
+        <circle cx="22" cy="22" r="9" fill="#2563eb" stroke="#fff" stroke-width="2.5"/>
+        <!-- 원 내부 흰 점 -->
+        <circle cx="22" cy="22" r="3" fill="#fff"/>
+      </svg>
     </div>`;
 }
 
@@ -486,7 +478,7 @@ function place(pos){
 }
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
 
-// ── 내 위치 마커 (원+화살표 통합) ────────────────────────
+// ── 내 위치 마커 (SVG 통합 아이콘) ──────────────────────
 function updateMyDot(lat,lng,acc,heading){
   myLat=lat;myLng=lng;
   const pos=new naver.maps.LatLng(lat,lng);
@@ -575,40 +567,27 @@ function clearAll(){
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
-
 function moveToResult(lat,lng,zoom){
   const ll=new naver.maps.LatLng(lat,lng);
   map.setCenter(ll);map.setZoom(zoom);
   if(!isLocked)place(ll);
   document.getElementById('si').value='';
 }
-
 async function doSearch(){
   const raw=document.getElementById('si').value.trim();
   if(!raw)return;
   const q=raw.replace(/\s+/g,' ').trim();
-
-  // 1순위: 카카오 장소 검색 (장소명에 강함)
   const kakaoResult=await kakaoSearch(q+' 부산');
   if(kakaoResult){moveToResult(kakaoResult.lat,kakaoResult.lng,17);return;}
-
-  // 2순위: 네이버 Geocoding (주소에 강함)
   const addrTries=[q,q+' 부산','부산 '+q,'부산 연제구 '+q,
-    q.replace(/(\d)([가-힣])/g,'$1 $2'),
-    q.replace(/([가-힣])(\d)/g,'$1 $2'),
-  ];
+    q.replace(/(\d)([가-힣])/g,'$1 $2'),q.replace(/([가-힣])(\d)/g,'$1 $2')];
   for(const query of [...new Set(addrTries)]){
     const r=await geocodeNaver(query);
     if(r){moveToResult(r.lat,r.lng,17);return;}
   }
-
-  // 3순위: Nominatim 보조
   for(const query of [q+' 부산','부산 연제구 '+q,q]){
     try{
-      const r=await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,
-        {headers:{'Accept-Language':'ko'}}
-      );
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=ko&countrycodes=kr`,{headers:{'Accept-Language':'ko'}});
       const d=await r.json();
       if(d&&d.length){
         const hit=d.find(x=>(x.display_name||'').includes('부산'))||d[0];
