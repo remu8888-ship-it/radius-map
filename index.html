@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>영진반경측정기</title>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=1zqd3bjv3u&submodules=geocoder"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -21,17 +20,14 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 .brand-all span:nth-child(5){animation-delay:.32s}.brand-all span:nth-child(6){animation-delay:.40s}
 .brand-all span:nth-child(7){animation-delay:.48s}
 @keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
-/* ✅ 검색창 가로 줄임 */
 .hs{flex:1;display:flex;gap:5px;margin-left:6px;min-width:0;max-width:200px}
 .hs input{flex:1;padding:6px 10px;border-radius:20px;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:12px;outline:none;min-width:0}
 .hs input::placeholder{color:rgba(255,255,255,.65)}
 .hs button{padding:6px 10px;background:#fff;color:var(--g2);border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .header-right{display:flex;align-items:center;gap:6px;margin-left:auto}
-/* ✅ 카메라 버튼 */
 .cam-btn{width:34px;height:34px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:10px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
 .cam-btn:active{background:rgba(255,255,255,.4);transform:scale(.92)}
 .help-btn{width:32px;height:32px;background:rgba(255,255,255,.2);border:none;border-radius:50%;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-/* ✅ 촬영 플래시 효과 */
 .flash{position:fixed;inset:0;background:#fff;z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s}
 .flash.show{opacity:.7}
 #mw{flex:1;position:relative;min-height:0}
@@ -96,17 +92,13 @@ input[type=range]:disabled{opacity:.4}
 .pb:active{transform:scale(.95)}
 .pb:disabled{opacity:.4;cursor:not-allowed}
 .clr{padding:8px 14px;background:transparent;border:1.5px solid var(--red);border-radius:14px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s}
-/* ✅ GPS 좌표 + 거리 표시 바 가독성 개선 */
 .ci{font-size:12px;color:var(--mu);text-align:center;font-family:'Courier New',monospace;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:8px;padding:5px 10px;letter-spacing:0.3px;}
 .ci span{color:var(--tx);font-weight:700;font-size:13px}
-/* ✅ 점선 거리 라벨 폰트 크기 키움 */
 .dist-label{background:rgba(12,14,20,0.88);color:#f59e0b;border:1px solid #f59e0b;border-radius:10px;padding:3px 10px;font-size:13px;font-weight:700;white-space:nowrap;}
 </style>
 </head>
 <body>
-<!-- ✅ 촬영 플래시 효과 -->
 <div class="flash" id="flash"></div>
-
 <div id="app">
 <header>
   <div class="brand">
@@ -114,13 +106,11 @@ input[type=range]:disabled{opacity:.4}
       <span>영</span><span>진</span><span>반</span><span>경</span><span>측</span><span>정</span><span>기</span>
     </div>
   </div>
-  <!-- ✅ 검색창 가로 줄임 -->
   <div class="hs">
     <input type="text" id="si" placeholder="주소·장소…" onkeydown="if(event.key==='Enter')doSearch()">
     <button onclick="doSearch()">검색</button>
   </div>
   <div class="header-right">
-    <!-- ✅ 카메라 버튼 -->
     <button class="cam-btn" onclick="captureMap()" title="지도 캡처">📷</button>
     <button class="help-btn" onclick="document.getElementById('helpModal').classList.add('show')">❓</button>
   </div>
@@ -139,12 +129,12 @@ input[type=range]:disabled{opacity:.4}
     <hr class="help-divider">
     <div class="help-section">
       <div class="help-section-title">📷 지도 촬영</div>
-      <div class="help-row"><div class="help-icon">📷</div><div class="help-text"><b>카메라 버튼</b> → 지도 영역만 캡처하여 이미지로 저장<br><span class="sub">반경 원이 표시된 상태에서 촬영하면 좋습니다</span></div></div>
+      <div class="help-row"><div class="help-icon">📷</div><div class="help-text"><b>카메라 버튼</b> → 반경 원·황금 점선 포함 지도 캡처 후 PNG 저장<br><span class="sub">반경이 설정된 상태에서 촬영하세요</span></div></div>
     </div>
     <hr class="help-divider">
     <div class="help-section">
       <div class="help-section-title">📍 내 위치</div>
-      <div class="help-row"><div class="help-icon">⊕</div><div class="help-text"><b>현재 위치 버튼</b> → 내 위치로 이동 + 중심점 자동 설정<br><span class="sub">파란 원+화살표로 내 위치와 진행방향이 표시됩니다</span></div></div>
+      <div class="help-row"><div class="help-icon">⊕</div><div class="help-text"><b>현재 위치 버튼</b> → 내 위치로 이동 + 중심점 자동 설정</div></div>
       <div class="help-row"><div class="help-icon">◎</div><div class="help-text"><b>실시간 추적</b> → 이동 시 지도가 자동으로 따라옵니다</div></div>
       <div class="help-row"><div class="help-icon">📏</div><div class="help-text"><b>황금 점선</b> → 내 위치에서 중심점까지 거리 표시</div></div>
     </div>
@@ -153,15 +143,15 @@ input[type=range]:disabled{opacity:.4}
       <div class="help-section-title">🗳 투표소 찾기</div>
       <div class="help-row"><div class="help-icon">🗳</div><div class="help-text"><b>파란 버튼</b> → 사전투표소 12개 표시/숨기기<br><span class="sub">5.29(금)~5.30(토) 06:00~18:00</span></div></div>
       <div class="help-row"><div class="help-icon">📍</div><div class="help-text"><b>빨간 버튼</b> → 선거일투표소 57개 표시/숨기기<br><span class="sub">6.3(수) 06:00~18:00</span></div></div>
-      <div class="help-row"><div class="help-icon">👆</div><div class="help-text"><b>투표소 핀 터치</b> → 투표소명·주소·시간·내위치 거리 확인<br><span class="sub">반경 100m가 자동으로 설정됩니다</span></div></div>
+      <div class="help-row"><div class="help-icon">👆</div><div class="help-text"><b>투표소 핀 터치</b> → 투표소명·주소·시간·내위치 거리 확인</div></div>
     </div>
     <hr class="help-divider">
     <div class="help-section">
       <div class="help-section-title">🔧 기타 기능</div>
       <div class="help-row"><div class="help-icon">🏘</div><div class="help-text"><b>행정동 버튼</b> → 연제구 12개 행정동 경계 표시/숨기기</div></div>
-      <div class="help-row"><div class="help-icon">🔓</div><div class="help-text"><b>자물쇠 버튼</b> → 반경 고정 (실수로 움직이지 않도록)</div></div>
+      <div class="help-row"><div class="help-icon">🔓</div><div class="help-text"><b>자물쇠 버튼</b> → 반경 고정</div></div>
       <div class="help-row"><div class="help-icon">🗺</div><div class="help-text"><b>지도 종류</b> → 일반·위성·지형·혼합 선택</div></div>
-      <div class="help-row"><div class="help-icon">🔍</div><div class="help-text"><b>주소·장소 검색</b> → 아파트명·학교·기관명 등 장소명으로도 검색 가능<br><span class="sub">띄어쓰기 오류가 있어도 검색됩니다</span></div></div>
+      <div class="help-row"><div class="help-icon">🔍</div><div class="help-text"><b>주소·장소 검색</b> → 아파트명·학교·기관명 등 장소명으로도 검색 가능</div></div>
       <div class="help-row"><div class="help-icon">🗑</div><div class="help-text"><b>초기화</b> → 중심점과 반경을 모두 지웁니다</div></div>
     </div>
     <div class="help-tip"><b>💡 투표소 활용 팁</b><br>⊕ 버튼으로 내 위치를 먼저 설정한 후 투표소 핀을 터치하면 투표소까지의 거리를 바로 확인할 수 있습니다.</div>
@@ -221,7 +211,6 @@ input[type=range]:disabled{opacity:.4}
   </div>
   <div class="sr">
     <div class="st"><span>반경 조절</span><span id="sv">500 m</span></div>
-    <!-- ✅ 슬라이더 0m~10km -->
     <input type="range" id="sl" min="0" max="10000" step="10" value="500" oninput="onSl(this.value)">
   </div>
   <div class="br">
@@ -248,33 +237,6 @@ let dongPolygons=[],showDong=true;
 const markers={pre:[],day:[]};
 const showing={pre:true,day:true};
 
-// ✅ 지도 캡처 (html2canvas - #mw 영역만)
-async function captureMap(){
-  const flash=document.getElementById('flash');
-  flash.classList.add('show');
-  setTimeout(()=>flash.classList.remove('show'),300);
-
-  const mw=document.getElementById('mw');
-  try{
-    const canvas=await html2canvas(mw,{
-      useCORS:true,
-      allowTaint:true,
-      scale:window.devicePixelRatio||2,
-      logging:false,
-      backgroundColor:null,
-    });
-    const link=document.createElement('a');
-    const now=new Date();
-    const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
-    link.download=`영진반경측정기_${ts}.png`;
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-  }catch(e){
-    alert('캡처에 실패했습니다.\n브라우저 보안 정책으로 인해 일부 환경에서는 제한될 수 있습니다.');
-    console.error(e);
-  }
-}
-
 function calcDist(a,b){
   const R=6371000,r=x=>x*Math.PI/180;
   const dLa=r(b.lat()-a.lat()),dLn=r(b.lng()-a.lng());
@@ -285,7 +247,152 @@ function calcDist(a,b){
 }
 function fmtDist(m){return m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';}
 
-// ✅ 거리 라벨 폰트 크기 키움
+// ── 지도 캡처 (Canvas에 직접 그리기) ────────────────────
+async function captureMap(){
+  if(!cM){alert('먼저 지도를 터치해 중심점을 설정하세요.');return;}
+
+  const flash=document.getElementById('flash');
+  flash.classList.add('show');
+  setTimeout(()=>flash.classList.remove('show'),300);
+
+  const mw=document.getElementById('mw');
+  const W=mw.offsetWidth,H=mw.offsetHeight;
+  const dpr=window.devicePixelRatio||2;
+  const CW=W*dpr,CH=H*dpr;
+
+  // ── 네이버 Static Map 배경 ────────────────────────────
+  const center=map.getCenter();
+  const zoom=map.getZoom();
+  const mapType=map.getMapTypeId()===naver.maps.MapTypeId.SATELLITE?'satellite_base':
+                map.getMapTypeId()===naver.maps.MapTypeId.HYBRID?'hybrid':
+                map.getMapTypeId()===naver.maps.MapTypeId.TERRAIN?'terrain':'basic';
+
+  const staticUrl=`https://naveropenapi.apigw.ntruss.com/map-static/v2/raster`
+    +`?w=${W*2}&h=${H*2}`
+    +`&center=${center.lng()},${center.lat()}`
+    +`&level=${zoom}`
+    +`&maptype=${mapType}`
+    +`&X-NCP-APIGW-API-KEY-ID=1zqd3bjv3u`;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=CW;canvas.height=CH;
+  const ctx=canvas.getContext('2d');
+
+  // 배경 지도 로드
+  await new Promise((resolve)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{ctx.drawImage(img,0,0,CW,CH);resolve();};
+    img.onerror=()=>{
+      // Static Map 실패 시 회색 배경
+      ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,CW,CH);resolve();
+    };
+    img.src=staticUrl;
+  });
+
+  const proj=map.getProjection();
+
+  // 좌표 → 캔버스 픽셀 변환
+  function toCanvas(latLng){
+    const offset=proj.fromCoordToOffset(latLng);
+    return{x:offset.x*dpr, y:offset.y*dpr};
+  }
+
+  const cp=cM.getPosition();
+  const cpPx=toCanvas(cp);
+
+  // ── 반경 원 그리기 ────────────────────────────────────
+  if(rM>0){
+    const edgePt=eLL(cp,rM);
+    const edgePx=toCanvas(edgePt);
+    const radiusPx=Math.hypot(edgePx.x-cpPx.x,edgePx.y-cpPx.y);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cpPx.x,cpPx.y,radiusPx,0,Math.PI*2);
+    ctx.fillStyle='rgba(3,199,90,0.1)';ctx.fill();
+    ctx.strokeStyle='#03C75A';ctx.lineWidth=3*dpr;
+    ctx.setLineDash([12*dpr,8*dpr]);ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── 중심점 마커 ───────────────────────────────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cpPx.x,cpPx.y,10*dpr,0,Math.PI*2);
+  ctx.fillStyle='#03C75A';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=3*dpr;
+  ctx.setLineDash([]);ctx.stroke();
+  // 외곽 글로우
+  ctx.beginPath();
+  ctx.arc(cpPx.x,cpPx.y,14*dpr,0,Math.PI*2);
+  ctx.strokeStyle='rgba(3,199,90,0.4)';ctx.lineWidth=4*dpr;ctx.stroke();
+  ctx.restore();
+
+  // ── 황금 점선 + 거리 라벨 ─────────────────────────────
+  if(myLat!==null&&myLng!==null){
+    const myPos=new naver.maps.LatLng(myLat,myLng);
+    const myPx=toCanvas(myPos);
+    const d=calcDist(cp,myPos);
+
+    // 점선
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cpPx.x,cpPx.y);ctx.lineTo(myPx.x,myPx.y);
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=2.5*dpr;
+    ctx.setLineDash([10*dpr,7*dpr]);ctx.stroke();
+    ctx.restore();
+
+    // 내 위치 점
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(myPx.x,myPx.y,8*dpr,0,Math.PI*2);
+    ctx.fillStyle='#2563eb';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2.5*dpr;
+    ctx.setLineDash([]);ctx.stroke();
+    ctx.restore();
+
+    // 거리 라벨 (중간점)
+    const mx=(cpPx.x+myPx.x)/2,my=(cpPx.y+myPx.y)/2;
+    const label=`📏 ${fmtDist(d)}`;
+    ctx.save();
+    ctx.font=`bold ${13*dpr}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(label).width;
+    const ph=9*dpr,pw=14*dpr,r=8*dpr;
+    const bx=mx-tw/2-pw,by=my-ph-4*dpr,bw=tw+pw*2,bh=(ph+4*dpr)*2;
+    ctx.fillStyle='rgba(12,14,20,0.88)';
+    ctx.beginPath();
+    ctx.roundRect(bx,by,bw,bh,r);ctx.fill();
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=1.5*dpr;
+    ctx.setLineDash([]);ctx.stroke();
+    ctx.fillStyle='#f59e0b';
+    ctx.fillText(label,mx,my);
+    ctx.restore();
+  }
+
+  // ── 반경 수치 라벨 ───────────────────────────────────
+  if(rM>0){
+    const lbl=`반경 ${fmtDist(rM)}`;
+    ctx.save();
+    ctx.font=`bold ${12*dpr}px 'Noto Sans KR',sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(lbl).width;
+    const lx=cpPx.x,ly=cpPx.y+18*dpr;
+    ctx.fillStyle='rgba(12,14,20,0.85)';
+    ctx.beginPath();ctx.roundRect(lx-tw/2-10*dpr,ly-10*dpr,tw+20*dpr,22*dpr,6*dpr);ctx.fill();
+    ctx.fillStyle='#03C75A';ctx.fillText(lbl,lx,ly);
+    ctx.restore();
+  }
+
+  // ── 저장 ─────────────────────────────────────────────
+  const link=document.createElement('a');
+  const now=new Date();
+  const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  link.download=`영진반경_${ts}.png`;
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+}
+
 function updateMyLine(){
   if(!cM||myLat===null){clearMyLine();return;}
   const cPos=cM.getPosition();
@@ -403,22 +510,16 @@ function geocodeNaver(addr){
     });
   });
 }
-
 async function kakaoSearch(query){
   try{
-    const r=await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=5`,
-      {headers:{'Authorization':'KakaoAK 609acf72a7b76934bf9755fbcd2aac74'}}
-    );
+    const r=await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=5`,{headers:{'Authorization':'KakaoAK 609acf72a7b76934bf9755fbcd2aac74'}});
     const d=await r.json();
     if(d.documents&&d.documents.length){
       const hit=d.documents.find(x=>(x.address_name||'').includes('부산'))||d.documents[0];
       return{lat:parseFloat(hit.y),lng:parseFloat(hit.x)};
     }
-  }catch(e){}
-  return null;
+  }catch(e){}return null;
 }
-
 function makeVoteMarker(s,type){
   const isPre=type==='pre';
   const color=isPre?'#2563eb':'#ff4757';
@@ -440,9 +541,7 @@ function makeVoteMarker(s,type){
     if(myLat!==null&&myLng!==null){
       const d=calcDist(new naver.maps.LatLng(myLat,myLng),vPos);
       document.getElementById('vpDist').textContent=`📏 내 위치에서 ${fmtDist(d)}`;
-    }else{
-      document.getElementById('vpDist').textContent='📏 내 위치 미확인 (⊕ 버튼 눌러주세요)';
-    }
+    }else document.getElementById('vpDist').textContent='📏 내 위치 미확인 (⊕ 버튼 눌러주세요)';
     if(!isLocked){
       rM=100;document.getElementById('sl').value=100;document.getElementById('sv').textContent='100 m';
       document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
@@ -451,15 +550,13 @@ function makeVoteMarker(s,type){
   });
   return m;
 }
-
 async function initMarkers(type){
   const data=type==='pre'?PRE:DAY;
   for(const s of data){
     if(s.lat&&s.lng){markers[type].push(makeVoteMarker(s,type));continue;}
     const coord=await geocodeNaver(s.addr);
     if(!coord){console.warn('geocode 실패:',s.addr);continue;}
-    s.lat=coord.lat;s.lng=coord.lng;
-    markers[type].push(makeVoteMarker(s,type));
+    s.lat=coord.lat;s.lng=coord.lng;markers[type].push(makeVoteMarker(s,type));
   }
 }
 function toggleMarkers(type){
@@ -467,8 +564,7 @@ function toggleMarkers(type){
   markers[type].forEach(m=>m.setMap(showing[type]?map:null));
   document.getElementById(type==='pre'?'preBtn':'dayBtn').classList.toggle(type==='pre'?'on-blue':'on-red',showing[type]);
 }
-initMarkers('pre');
-initMarkers('day');
+initMarkers('pre');initMarkers('day');
 
 const DONG_COLORS=['#a855f7','#06b6d4','#f59e0b','#10b981','#f43f5e','#3b82f6','#84cc16','#f97316','#ec4899','#14b8a6','#8b5cf6','#ef4444'];
 async function drawDong(){
@@ -491,11 +587,7 @@ async function drawDong(){
     });
   }catch(e){console.error('행정동 로드 실패:',e);}
 }
-function toggleDong(){
-  showDong=!showDong;
-  dongPolygons.forEach(p=>p.setMap(showDong?map:null));
-  document.getElementById('dongBtn').classList.toggle('on-purple',showDong);
-}
+function toggleDong(){showDong=!showDong;dongPolygons.forEach(p=>p.setMap(showDong?map:null));document.getElementById('dongBtn').classList.toggle('on-purple',showDong);}
 drawDong();
 
 function updateCompass(h){lastHeading=h;document.getElementById('needle').setAttribute('transform',`rotate(${h},20,20)`);}
@@ -526,7 +618,6 @@ function place(pos){
   upd(pos);updateMyLine();
 }
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
-
 function updateMyDot(lat,lng,acc,heading){
   myLat=lat;myLng=lng;
   const pos=new naver.maps.LatLng(lat,lng);
@@ -534,14 +625,9 @@ function updateMyDot(lat,lng,acc,heading){
   if(!myDot){
     myDot=new naver.maps.Marker({position:pos,map,icon:{content,anchor:new naver.maps.Point(0,0)},zIndex:21});
     myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
-  }else{
-    myDot.setPosition(pos);
-    myDot.setIcon({content,anchor:new naver.maps.Point(0,0)});
-    myAcc.setCenter(pos);myAcc.setRadius(acc);
-  }
+  }else{myDot.setPosition(pos);myDot.setIcon({content,anchor:new naver.maps.Point(0,0)});myAcc.setCenter(pos);myAcc.setRadius(acc);}
   updateMyLine();
 }
-
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
@@ -567,12 +653,7 @@ function upd(p){
   document.getElementById('sv').textContent=fmtDist(rM);
   updCoord(p);
 }
-function onSl(v){
-  if(isLocked)return;
-  rM=parseInt(v);
-  document.getElementById('sv').textContent=fmtDist(rM);
-  if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}
-}
+function onSl(v){if(isLocked)return;rM=parseInt(v);document.getElementById('sv').textContent=fmtDist(rM);if(circ){circ.setRadius(rM);eM.setPosition(eLL(cM.getPosition(),rM));upd(cM.getPosition());}}
 [{l:'50m',v:50},{l:'90m',v:90},{l:'100m',v:100},{l:'200m',v:200}].forEach(p=>{
   const b=document.createElement('button');b.className='pb';b.textContent=p.l;
   b.onclick=()=>{if(isLocked)return;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');rM=p.v;document.getElementById('sl').value=p.v;if(circ){circ.setRadius(p.v);eM.setPosition(eLL(cM.getPosition(),p.v));upd(cM.getPosition());}else document.getElementById('sv').textContent=fmtDist(p.v);};
@@ -587,17 +668,12 @@ function clearAll(){
   ['vR','vD','vA'].forEach(id=>document.getElementById(id).textContent='—');
   document.getElementById('ci').textContent='중심점을 설정하세요';
 }
-function moveToResult(lat,lng,zoom){
-  const ll=new naver.maps.LatLng(lat,lng);map.setCenter(ll);map.setZoom(zoom);
-  if(!isLocked)place(ll);document.getElementById('si').value='';
-}
+function moveToResult(lat,lng,zoom){const ll=new naver.maps.LatLng(lat,lng);map.setCenter(ll);map.setZoom(zoom);if(!isLocked)place(ll);document.getElementById('si').value='';}
 async function doSearch(){
   const raw=document.getElementById('si').value.trim();if(!raw)return;
   const q=raw.replace(/\s+/g,' ').trim();
-  const kakaoResult=await kakaoSearch(q+' 부산');
-  if(kakaoResult){moveToResult(kakaoResult.lat,kakaoResult.lng,17);return;}
-  const addrTries=[q,q+' 부산','부산 '+q,'부산 연제구 '+q,q.replace(/(\d)([가-힣])/g,'$1 $2'),q.replace(/([가-힣])(\d)/g,'$1 $2')];
-  for(const query of [...new Set(addrTries)]){
+  const kk=await kakaoSearch(q+' 부산');if(kk){moveToResult(kk.lat,kk.lng,17);return;}
+  for(const query of [...new Set([q,q+' 부산','부산 '+q,'부산 연제구 '+q,q.replace(/(\d)([가-힣])/g,'$1 $2'),q.replace(/([가-힣])(\d)/g,'$1 $2')])]){
     const r=await geocodeNaver(query);if(r){moveToResult(r.lat,r.lng,17);return;}
   }
   for(const query of [q+' 부산','부산 연제구 '+q,q]){
