@@ -34,6 +34,8 @@ header{height:52px;background:var(--g);display:flex;align-items:center;padding:0
 #map{width:100%;height:100%}
 .lock-badge{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:500;background:var(--gold);color:#000;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;pointer-events:none;display:none}
 .lock-badge.show{display:block}
+.track-hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:499;background:#2563eb;color:#fff;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;pointer-events:none;display:none}
+.track-hint.show{display:block}
 .tbs{position:absolute;top:12px;right:10px;z-index:500;display:flex;flex-direction:column;gap:3px}
 .tb{padding:5px 10px;background:rgba(12,14,20,.85);backdrop-filter:blur(6px);border:1px solid var(--bd);border-radius:6px;color:var(--mu);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .2s}
 .tb.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:700}
@@ -135,7 +137,7 @@ input[type=range]:disabled{opacity:.4}
     <div class="help-section">
       <div class="help-section-title">📍 내 위치</div>
       <div class="help-row"><div class="help-icon">⊕</div><div class="help-text"><b>현재 위치 버튼</b> → 내 위치로 이동 + 중심점 자동 설정</div></div>
-      <div class="help-row"><div class="help-icon">◎</div><div class="help-text"><b>실시간 추적</b> → 이동 시 지도가 자동으로 따라옵니다</div></div>
+      <div class="help-row"><div class="help-icon">◎</div><div class="help-text"><b>실시간 추적</b> → 이동 시 지도가 자동으로 따라옵니다<br><span class="sub">추적 해제 후 파란 점을 드래그하면 거리를 수동 확인할 수 있습니다</span></div></div>
       <div class="help-row"><div class="help-icon">📏</div><div class="help-text"><b>황금 점선</b> → 내 위치에서 중심점까지 거리 표시</div></div>
     </div>
     <hr class="help-divider">
@@ -154,13 +156,14 @@ input[type=range]:disabled{opacity:.4}
       <div class="help-row"><div class="help-icon">🔍</div><div class="help-text"><b>주소·장소 검색</b> → 아파트명·학교·기관명 등 장소명으로도 검색 가능</div></div>
       <div class="help-row"><div class="help-icon">🗑</div><div class="help-text"><b>초기화</b> → 중심점과 반경을 모두 지웁니다</div></div>
     </div>
-    <div class="help-tip"><b>💡 투표소 활용 팁</b><br>⊕ 버튼으로 내 위치를 먼저 설정한 후 투표소 핀을 터치하면 투표소까지의 거리를 바로 확인할 수 있습니다.</div>
+    <div class="help-tip"><b>💡 거리 수동 측정 팁</b><br>◎ 실시간 추적을 한 번 켜서 내 위치를 표시한 뒤 추적을 해제하면, 파란 위치 점을 손으로 드래그하여 원하는 지점까지의 거리를 직접 확인할 수 있습니다.</div>
   </div>
 </div>
 
 <div id="mw">
   <div id="map"></div>
   <div class="lock-badge" id="lockBadge">🔒 반경 고정됨</div>
+  <div class="track-hint" id="trackHint">📍 위치 점을 드래그해 거리 측정</div>
   <div class="tbs">
     <button class="tb on" onclick="setType('NORMAL',this)">🗺 일반</button>
     <button class="tb" onclick="setType('SATELLITE',this)">🛰 위성</button>
@@ -247,7 +250,6 @@ function calcDist(a,b){
 }
 function fmtDist(m){return m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';}
 
-// ── 캡처 라벨 헬퍼 ──────────────────────────────────────
 function drawLabel(ctx,text,x,y,color){
   ctx.save();
   ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -259,7 +261,6 @@ function drawLabel(ctx,text,x,y,color){
   ctx.restore();
 }
 
-// ── 지도 캡처 (OSM 타일 합성 - CORS 우회) ────────────────
 async function captureMap(){
   if(!cM){alert('먼저 지도를 터치해 중심점을 설정하세요.');return;}
   const flash=document.getElementById('flash');
@@ -285,7 +286,6 @@ async function captureMap(){
   ctx.scale(dpr,dpr);
   ctx.fillStyle='#e8ede4';ctx.fillRect(0,0,W,H);
 
-  // OSM 타일 로드 & 배치
   const x0=Math.floor(originX/TS),x1=Math.floor((originX+W)/TS);
   const y0=Math.floor(originY/TS),y1=Math.floor((originY+H)/TS);
   const jobs=[];
@@ -310,7 +310,6 @@ async function captureMap(){
   const cp=cM.getPosition();
   const cpC=toC(cp.lat(),cp.lng());
 
-  // 반경 원
   if(rM>0){
     const e=eLL(cp,rM),eC=toC(e.lat(),e.lng());
     const rad=Math.hypot(eC.x-cpC.x,eC.y-cpC.y);
@@ -319,7 +318,6 @@ async function captureMap(){
     ctx.strokeStyle='#03C75A';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.stroke();ctx.setLineDash([]);
   }
 
-  // 황금 점선 + 내위치
   if(myLat!==null&&myLng!==null){
     const myC=toC(myLat,myLng);
     ctx.beginPath();ctx.moveTo(cpC.x,cpC.y);ctx.lineTo(myC.x,myC.y);
@@ -330,22 +328,16 @@ async function captureMap(){
     drawLabel(ctx,`📏 ${fmtDist(d)}`,(cpC.x+myC.x)/2,(cpC.y+myC.y)/2,'#f59e0b');
   }
 
-  // 중심점
   ctx.beginPath();ctx.arc(cpC.x,cpC.y,14,0,Math.PI*2);ctx.strokeStyle='rgba(3,199,90,.4)';ctx.lineWidth=4;ctx.stroke();
   ctx.beginPath();ctx.arc(cpC.x,cpC.y,10,0,Math.PI*2);ctx.fillStyle='#03C75A';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
   if(rM>0)drawLabel(ctx,`반경 ${fmtDist(rM)}`,cpC.x,cpC.y+24,'#03C75A');
 
-  // 저장
   const now=new Date();
   const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
   const link=document.createElement('a');
   link.download=`영진반경_${ts}.png`;
-  try{
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-  }catch(e){
-    alert('이미지 저장에 실패했습니다. 다시 시도해주세요.');
-  }
+  try{link.href=canvas.toDataURL('image/png');link.click();}
+  catch(e){alert('이미지 저장에 실패했습니다. 다시 시도해주세요.');}
 }
 
 function updateMyLine(){
@@ -573,30 +565,62 @@ function place(pos){
   upd(pos);updateMyLine();
 }
 naver.maps.Event.addListener(map,'click',e=>{if(!isLocked)place(e.coord);});
+
+// ── 내 위치 마커 (추적 해제 시 드래그 가능) ───────────────
 function updateMyDot(lat,lng,acc,heading){
   myLat=lat;myLng=lng;
   const pos=new naver.maps.LatLng(lat,lng);
   const content=makeMyDotContent(heading);
   if(!myDot){
-    myDot=new naver.maps.Marker({position:pos,map,icon:{content,anchor:new naver.maps.Point(0,0)},zIndex:21});
+    myDot=new naver.maps.Marker({
+      position:pos,map,
+      icon:{content,anchor:new naver.maps.Point(0,0)},
+      zIndex:21,
+      draggable:!isTracking
+    });
     myAcc=new naver.maps.Circle({map,center:pos,radius:acc,strokeColor:'#2563eb',strokeWeight:1,strokeOpacity:.4,fillColor:'#2563eb',fillOpacity:.06});
-  }else{myDot.setPosition(pos);myDot.setIcon({content,anchor:new naver.maps.Point(0,0)});myAcc.setCenter(pos);myAcc.setRadius(acc);}
+    // 추적 해제 후 드래그하여 거리 수동 측정
+    naver.maps.Event.addListener(myDot,'drag',e=>{
+      if(isTracking)return;
+      myLat=e.coord.lat();myLng=e.coord.lng();
+      myAcc.setCenter(e.coord);myAcc.setRadius(0);
+      updateMyLine();
+    });
+  }else{
+    myDot.setPosition(pos);
+    myDot.setIcon({content,anchor:new naver.maps.Point(0,0)});
+    myAcc.setCenter(pos);myAcc.setRadius(acc);
+  }
   updateMyLine();
 }
+
 function toggleTracking(){isTracking?stopTracking():startTracking();}
 function startTracking(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
-  isTracking=true;document.getElementById('trackBtn').classList.add('tracking');startCompass();
+  isTracking=true;document.getElementById('trackBtn').classList.add('tracking');
+  document.getElementById('trackHint').classList.remove('show');
+  if(myDot)myDot.setOptions({draggable:false});
+  startCompass();
   watchId=navigator.geolocation.watchPosition(
     pos=>{const{latitude:lat,longitude:lng,accuracy:acc,heading:h}=pos.coords;const heading=h!=null?h:lastHeading;updateMyDot(lat,lng,acc,heading);updateCompass(heading);if(isTracking)map.setCenter(new naver.maps.LatLng(lat,lng));},
     ()=>stopTracking(),{enableHighAccuracy:true,maximumAge:500,timeout:10000}
   );
 }
-function stopTracking(){isTracking=false;document.getElementById('trackBtn').classList.remove('tracking');if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
+function stopTracking(){
+  isTracking=false;document.getElementById('trackBtn').classList.remove('tracking');
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  if(myDot){
+    myDot.setOptions({draggable:true});
+    // 드래그 가능 안내 표시
+    const hint=document.getElementById('trackHint');
+    hint.classList.add('show');
+    setTimeout(()=>hint.classList.remove('show'),3000);
+  }
+}
 function locateOnce(){
   if(!navigator.geolocation){alert('위치 서비스 미지원');return;}
   navigator.geolocation.getCurrentPosition(
-    pos=>{const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;const ll=new naver.maps.LatLng(lat,lng);map.setCenter(ll);map.setZoom(15);updateMyDot(lat,lng,acc,lastHeading);if(!isLocked)place(ll);},
+    pos=>{const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;const ll=new naver.maps.LatLng(lat,lng);map.setCenter(ll);map.setZoom(15);updateMyDot(lat,lng,acc,lastHeading);if(myDot)myDot.setOptions({draggable:!isTracking});if(!isLocked)place(ll);},
     ()=>alert('위치를 가져올 수 없습니다.')
   );
 }
