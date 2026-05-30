@@ -247,7 +247,7 @@ function calcDist(a,b){
 }
 function fmtDist(m){return m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';}
 
-// ── 지도 캡처 (Canvas에 직접 그리기) ────────────────────
+// ── 지도 캡처 (네이버 지도 Canvas 직접 추출) ────────────
 async function captureMap(){
   if(!cM){alert('먼저 지도를 터치해 중심점을 설정하세요.');return;}
 
@@ -258,58 +258,37 @@ async function captureMap(){
   const mw=document.getElementById('mw');
   const W=mw.offsetWidth,H=mw.offsetHeight;
   const dpr=window.devicePixelRatio||2;
-  const CW=W*dpr,CH=H*dpr;
-
-  // ── 네이버 Static Map 배경 ────────────────────────────
-  const center=map.getCenter();
-  const zoom=map.getZoom();
-  const mapType=map.getMapTypeId()===naver.maps.MapTypeId.SATELLITE?'satellite_base':
-                map.getMapTypeId()===naver.maps.MapTypeId.HYBRID?'hybrid':
-                map.getMapTypeId()===naver.maps.MapTypeId.TERRAIN?'terrain':'basic';
-
-  const staticUrl=`https://naveropenapi.apigw.ntruss.com/map-static/v2/raster`
-    +`?w=${W*2}&h=${H*2}`
-    +`&center=${center.lng()},${center.lat()}`
-    +`&level=${zoom}`
-    +`&maptype=${mapType}`
-    +`&X-NCP-APIGW-API-KEY-ID=1zqd3bjv3u`;
 
   const canvas=document.createElement('canvas');
-  canvas.width=CW;canvas.height=CH;
+  canvas.width=W*dpr;canvas.height=H*dpr;
   const ctx=canvas.getContext('2d');
 
-  // 배경 지도 로드
-  await new Promise((resolve)=>{
-    const img=new Image();
-    img.crossOrigin='anonymous';
-    img.onload=()=>{ctx.drawImage(img,0,0,CW,CH);resolve();};
-    img.onerror=()=>{
-      // Static Map 실패 시 회색 배경
-      ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,CW,CH);resolve();
-    };
-    img.src=staticUrl;
-  });
+  // 네이버 지도 내부 Canvas 복사
+  const mapCanvases=document.querySelectorAll('#map canvas');
+  if(mapCanvases.length>0){
+    mapCanvases.forEach(mc=>{
+      try{ctx.drawImage(mc,0,0,W*dpr,H*dpr);}catch(e){}
+    });
+  }else{
+    ctx.fillStyle='#e8ede4';ctx.fillRect(0,0,W*dpr,H*dpr);
+  }
 
   const proj=map.getProjection();
-
-  // 좌표 → 캔버스 픽셀 변환
   function toCanvas(latLng){
-    const offset=proj.fromCoordToOffset(latLng);
-    return{x:offset.x*dpr, y:offset.y*dpr};
+    const off=proj.fromCoordToOffset(latLng);
+    return{x:off.x*dpr,y:off.y*dpr};
   }
 
   const cp=cM.getPosition();
   const cpPx=toCanvas(cp);
 
-  // ── 반경 원 그리기 ────────────────────────────────────
+  // ── 반경 원 ──────────────────────────────────────────
   if(rM>0){
-    const edgePt=eLL(cp,rM);
-    const edgePx=toCanvas(edgePt);
+    const edgePx=toCanvas(eLL(cp,rM));
     const radiusPx=Math.hypot(edgePx.x-cpPx.x,edgePx.y-cpPx.y);
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(cpPx.x,cpPx.y,radiusPx,0,Math.PI*2);
-    ctx.fillStyle='rgba(3,199,90,0.1)';ctx.fill();
+    ctx.beginPath();ctx.arc(cpPx.x,cpPx.y,radiusPx,0,Math.PI*2);
+    ctx.fillStyle='rgba(3,199,90,0.12)';ctx.fill();
     ctx.strokeStyle='#03C75A';ctx.lineWidth=3*dpr;
     ctx.setLineDash([12*dpr,8*dpr]);ctx.stroke();
     ctx.restore();
@@ -317,16 +296,27 @@ async function captureMap(){
 
   // ── 중심점 마커 ───────────────────────────────────────
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cpPx.x,cpPx.y,10*dpr,0,Math.PI*2);
-  ctx.fillStyle='#03C75A';ctx.fill();
-  ctx.strokeStyle='#fff';ctx.lineWidth=3*dpr;
+  ctx.beginPath();ctx.arc(cpPx.x,cpPx.y,14*dpr,0,Math.PI*2);
+  ctx.strokeStyle='rgba(3,199,90,0.4)';ctx.lineWidth=4*dpr;
   ctx.setLineDash([]);ctx.stroke();
-  // 외곽 글로우
-  ctx.beginPath();
-  ctx.arc(cpPx.x,cpPx.y,14*dpr,0,Math.PI*2);
-  ctx.strokeStyle='rgba(3,199,90,0.4)';ctx.lineWidth=4*dpr;ctx.stroke();
+  ctx.beginPath();ctx.arc(cpPx.x,cpPx.y,10*dpr,0,Math.PI*2);
+  ctx.fillStyle='#03C75A';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=3*dpr;ctx.stroke();
   ctx.restore();
+
+  // ── 반경 수치 라벨 ────────────────────────────────────
+  if(rM>0){
+    const lbl=`반경 ${fmtDist(rM)}`;
+    ctx.save();
+    ctx.font=`bold ${13*dpr}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(lbl).width;
+    const lx=cpPx.x,ly=cpPx.y+22*dpr;
+    ctx.fillStyle='rgba(12,14,20,0.88)';
+    ctx.beginPath();ctx.roundRect(lx-tw/2-10*dpr,ly-11*dpr,tw+20*dpr,22*dpr,6*dpr);ctx.fill();
+    ctx.fillStyle='#03C75A';ctx.fillText(lbl,lx,ly);
+    ctx.restore();
+  }
 
   // ── 황금 점선 + 거리 라벨 ─────────────────────────────
   if(myLat!==null&&myLng!==null){
@@ -334,57 +324,36 @@ async function captureMap(){
     const myPx=toCanvas(myPos);
     const d=calcDist(cp,myPos);
 
-    // 점선
+    // 황금 점선
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cpPx.x,cpPx.y);ctx.lineTo(myPx.x,myPx.y);
+    ctx.beginPath();ctx.moveTo(cpPx.x,cpPx.y);ctx.lineTo(myPx.x,myPx.y);
     ctx.strokeStyle='#f59e0b';ctx.lineWidth=2.5*dpr;
     ctx.setLineDash([10*dpr,7*dpr]);ctx.stroke();
     ctx.restore();
 
     // 내 위치 점
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(myPx.x,myPx.y,8*dpr,0,Math.PI*2);
+    ctx.beginPath();ctx.arc(myPx.x,myPx.y,8*dpr,0,Math.PI*2);
     ctx.fillStyle='#2563eb';ctx.fill();
     ctx.strokeStyle='#fff';ctx.lineWidth=2.5*dpr;
     ctx.setLineDash([]);ctx.stroke();
     ctx.restore();
 
-    // 거리 라벨 (중간점)
+    // 거리 라벨
     const mx=(cpPx.x+myPx.x)/2,my=(cpPx.y+myPx.y)/2;
     const label=`📏 ${fmtDist(d)}`;
     ctx.save();
     ctx.font=`bold ${13*dpr}px sans-serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';
     const tw=ctx.measureText(label).width;
-    const ph=9*dpr,pw=14*dpr,r=8*dpr;
-    const bx=mx-tw/2-pw,by=my-ph-4*dpr,bw=tw+pw*2,bh=(ph+4*dpr)*2;
     ctx.fillStyle='rgba(12,14,20,0.88)';
-    ctx.beginPath();
-    ctx.roundRect(bx,by,bw,bh,r);ctx.fill();
-    ctx.strokeStyle='#f59e0b';ctx.lineWidth=1.5*dpr;
-    ctx.setLineDash([]);ctx.stroke();
-    ctx.fillStyle='#f59e0b';
-    ctx.fillText(label,mx,my);
+    ctx.beginPath();ctx.roundRect(mx-tw/2-12*dpr,my-12*dpr,tw+24*dpr,24*dpr,8*dpr);ctx.fill();
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([]);ctx.stroke();
+    ctx.fillStyle='#f59e0b';ctx.fillText(label,mx,my);
     ctx.restore();
   }
 
-  // ── 반경 수치 라벨 ───────────────────────────────────
-  if(rM>0){
-    const lbl=`반경 ${fmtDist(rM)}`;
-    ctx.save();
-    ctx.font=`bold ${12*dpr}px 'Noto Sans KR',sans-serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    const tw=ctx.measureText(lbl).width;
-    const lx=cpPx.x,ly=cpPx.y+18*dpr;
-    ctx.fillStyle='rgba(12,14,20,0.85)';
-    ctx.beginPath();ctx.roundRect(lx-tw/2-10*dpr,ly-10*dpr,tw+20*dpr,22*dpr,6*dpr);ctx.fill();
-    ctx.fillStyle='#03C75A';ctx.fillText(lbl,lx,ly);
-    ctx.restore();
-  }
-
-  // ── 저장 ─────────────────────────────────────────────
+  // ── PNG 저장 ─────────────────────────────────────────
   const link=document.createElement('a');
   const now=new Date();
   const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
@@ -426,79 +395,79 @@ function makeMyDotContent(heading){
 }
 
 const PRE=[
-  {name:'거제제1동사전투표소', bld:'거제1동행정복지센터 3층 다목적실',   addr:'부산광역시 연제구 법원북로 88'},
-  {name:'거제제2동사전투표소', bld:'거제2동행정복지센터 3층 다목적홀',   addr:'부산광역시 연제구 아시아드대로22번길 19'},
-  {name:'거제제3동사전투표소', bld:'거제3동행정복지센터 1층 평생학습실', addr:'부산광역시 연제구 거제대로 180'},
-  {name:'거제제4동사전투표소', bld:'거제4동행정복지센터 4층 다목적강당', addr:'부산광역시 연제구 화지로52번길 33'},
-  {name:'연산제1동사전투표소', bld:'연산1동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 연동로8번길 66'},
-  {name:'연산제2동사전투표소', bld:'연제구청 2층 대회의실',              addr:'부산광역시 연제구 연제로 2'},
-  {name:'연산제3동사전투표소', bld:'연산3동행정복지센터 4층 대회의실',   addr:'부산광역시 연제구 연수로208번길 16'},
-  {name:'연산제4동사전투표소', bld:'연산로터리새마을금고 4층 대강당',    addr:'부산광역시 연제구 쌍미천로141번길 22'},
-  {name:'연산제5동사전투표소', bld:'연산5동행정복지센터 2층 평생학습실', addr:'부산광역시 연제구 거제천로124번길 15'},
-  {name:'연산제6동사전투표소', bld:'연산6동행정복지센터 4층 프로그램실', addr:'부산광역시 연제구 쌍미천로52번길 2'},
-  {name:'연산제8동사전투표소', bld:'연산8동행정복지센터 3층 프로그램실', addr:'부산광역시 연제구 과정로 262 302호'},
-  {name:'연산제9동사전투표소', bld:'연산9동행정복지센터 3층 대회의실',   addr:'부산광역시 연제구 과정로164번길 38'},
+  {name:'거제제1동사전투표소',bld:'거제1동행정복지센터 3층 다목적실',addr:'부산광역시 연제구 법원북로 88'},
+  {name:'거제제2동사전투표소',bld:'거제2동행정복지센터 3층 다목적홀',addr:'부산광역시 연제구 아시아드대로22번길 19'},
+  {name:'거제제3동사전투표소',bld:'거제3동행정복지센터 1층 평생학습실',addr:'부산광역시 연제구 거제대로 180'},
+  {name:'거제제4동사전투표소',bld:'거제4동행정복지센터 4층 다목적강당',addr:'부산광역시 연제구 화지로52번길 33'},
+  {name:'연산제1동사전투표소',bld:'연산1동행정복지센터 3층 대회의실',addr:'부산광역시 연제구 연동로8번길 66'},
+  {name:'연산제2동사전투표소',bld:'연제구청 2층 대회의실',addr:'부산광역시 연제구 연제로 2'},
+  {name:'연산제3동사전투표소',bld:'연산3동행정복지센터 4층 대회의실',addr:'부산광역시 연제구 연수로208번길 16'},
+  {name:'연산제4동사전투표소',bld:'연산로터리새마을금고 4층 대강당',addr:'부산광역시 연제구 쌍미천로141번길 22'},
+  {name:'연산제5동사전투표소',bld:'연산5동행정복지센터 2층 평생학습실',addr:'부산광역시 연제구 거제천로124번길 15'},
+  {name:'연산제6동사전투표소',bld:'연산6동행정복지센터 4층 프로그램실',addr:'부산광역시 연제구 쌍미천로52번길 2'},
+  {name:'연산제8동사전투표소',bld:'연산8동행정복지센터 3층 프로그램실',addr:'부산광역시 연제구 과정로 262 302호'},
+  {name:'연산제9동사전투표소',bld:'연산9동행정복지센터 3층 대회의실',addr:'부산광역시 연제구 과정로164번길 38'},
 ];
 
 const DAY=[
-  {name:'거제제1동제1투', bld:'연제구 보훈회관 3층 다목적홀',            addr:'부산광역시 연제구 명륜로2번길 9'},
-  {name:'거제제1동제2투', bld:'동래세무서 별관 1층 로비',                addr:'부산광역시 연제구 거제천로269번길 16'},
-  {name:'거제제1동제3투', bld:'거학초등학교 1층 서편 현관',              addr:'부산광역시 연제구 교대로24번길 36'},
-  {name:'거제제1동제4투', bld:'부산연제우체국 1층 홍보관',               addr:'부산광역시 연제구 법원북로 33'},
-  {name:'거제제1동제5투', bld:'남문초등학교 1층 1-3반',                  addr:'부산광역시 연제구 법원북로 23'},
-  {name:'거제제1동제6투', bld:'거제1동행정복지센터 3층 다목적실',        addr:'부산광역시 연제구 법원북로 88'},
-  {name:'거제제1동제7투', bld:'거제동월드메르디앙아파트 108동 지하1층',  addr:'부산광역시 연제구 거제천로 233'},
-  {name:'거제제2동제1투', bld:'거제2동행정복지센터 3층 다목적홀',        addr:'부산광역시 연제구 아시아드대로22번길 19'},
-  {name:'거제제2동제2투', bld:'창신초등학교 1층 현관로비',               addr:'부산광역시 연제구 종합운동장로12번길 15'},
-  {name:'거제제2동제3투', bld:'거제종합사회복지관 3층 세미나실',         addr:'부산광역시 연제구 아시아드대로46번길 45'},
-  {name:'거제제2동제4투', bld:'거제여자중학교 1층 정문로비',             addr:'부산광역시 연제구 금용로 43'},
-  {name:'거제제2동제5투', bld:'레이카운티아파트 1단지 커뮤니티센터 P1층 입주민카페', addr:'부산광역시 연제구 아시아드대로 39', lat:35.18871, lng:129.06445},
-  {name:'거제제2동제6투', bld:'레이카운티아파트 2단지 커뮤니티센터 2층 입주민카페',  addr:'부산광역시 연제구 아시아드대로 39', lat:35.18883, lng:129.06660},
-  {name:'거제제3동제1투', bld:'연제구 육아종합지원센터 4층 다목적강당',  addr:'부산광역시 연제구 거제대로124번길 22'},
-  {name:'거제제3동제2투', bld:'거제3동행정복지센터 1층 평생학습실',      addr:'부산광역시 연제구 거제대로 180'},
-  {name:'거제제3동제3투', bld:'나라키움 부산통합청사 2층 대강당',        addr:'부산광역시 연제구 거제대로 222'},
-  {name:'거제제4동제1투', bld:'거제4동행정복지센터 4층 다목적강당',      addr:'부산광역시 연제구 화지로52번길 33'},
-  {name:'거제제4동제2투', bld:'거성중학교 1층 학부모회실',               addr:'부산광역시 연제구 해맞이로109번길 61'},
-  {name:'거제제4동제3투', bld:'거제건강생활지원센터 3층 다목적실',       addr:'부산광역시 연제구 해맞이로 53'},
-  {name:'연산제1동제1투', bld:'연산1동행정복지센터 3층 대회의실',        addr:'부산광역시 연제구 연동로8번길 66'},
-  {name:'연산제1동제2투', bld:'연서초등학교 1층 강당',                   addr:'부산광역시 연제구 거제천로270번길 30'},
-  {name:'연산제1동제3투', bld:'연산중학교 1층 학부모실',                 addr:'부산광역시 연제구 고분로56번길 39'},
-  {name:'연산제1동제4투', bld:'연산자이아파트 1층 입주자대표회의실',     addr:'부산광역시 연제구 과정로343번길 43'},
-  {name:'연산제2동제1투', bld:'연산2동행정복지센터 2층 다목적강당',      addr:'부산광역시 연제구 연제로42번길 46'},
-  {name:'연산제2동제2투', bld:'시청역비스타동원아파트 지하1층 작은도서관',addr:'부산광역시 연제구 연제로 30'},
-  {name:'연산제2동제3투', bld:'연제구청 2층 대회의실',                   addr:'부산광역시 연제구 연제로 2'},
-  {name:'연산제2동제4투', bld:'연제도서관 지하1층 다목적홀',             addr:'부산광역시 연제구 황령산로 612'},
-  {name:'연산제2동제5투', bld:'연제롯데캐슬데시앙 커뮤니티센터',        addr:'부산광역시 연제구 월드컵대로 55'},
-  {name:'연산제3동제1투', bld:'섬강스위트빌 1층 주차장',                 addr:'부산광역시 연제구 금련로 27'},
-  {name:'연산제3동제2투', bld:'연산3동행정복지센터 4층 대회의실',        addr:'부산광역시 연제구 연수로208번길 16'},
-  {name:'연산제3동제3투', bld:'연산종합사회복지관 지하1층 경로식당',     addr:'부산광역시 연제구 봉수로 17'},
-  {name:'연산제4동제1투', bld:'부산광역시 노인종합복지관 1층 로비',      addr:'부산광역시 연제구 거제천로230번길 18'},
-  {name:'연산제4동제2투', bld:'연산4동행정복지센터 1층 민원실',          addr:'부산광역시 연제구 쌍미천로151번길 42'},
-  {name:'연산제4동제3투', bld:'연산로터리새마을금고 4층 대강당',         addr:'부산광역시 연제구 쌍미천로141번길 22'},
-  {name:'연산제4동제4투', bld:'한일태권도 1층 태권도장',                 addr:'부산광역시 연제구 쌍미천로 106'},
-  {name:'연산제4동제5투', bld:'연산SK뷰아파트 1단지 101동 1층 노인정',  addr:'부산광역시 연제구 중앙대로1124번길 15'},
-  {name:'연산제5동제1투', bld:'연산5동행정복지센터 1층 민원실',          addr:'부산광역시 연제구 거제천로124번길 15'},
-  {name:'연산제5동제2투', bld:'연제초등학교 1층 1-3반',                  addr:'부산광역시 연제구 중앙대로1065번길 14'},
-  {name:'연산제5동제3투', bld:'도시철도 연산역 지하1층 대합실',          addr:'부산광역시 연제구 중앙대로 1101'},
-  {name:'연산제5동제4투', bld:'부산광역시청 1층 대회의실',               addr:'부산광역시 연제구 중앙대로 1001'},
-  {name:'연산제6동제1투', bld:'(구)새화랑체육관 1층',                    addr:'부산광역시 연제구 대리로6번길 115-1'},
-  {name:'연산제6동제2투', bld:'부산연산동우체국 1층 주차장',             addr:'부산광역시 연제구 연수로 197'},
-  {name:'연산제6동제3투', bld:'연산6동행정복지센터 4층 프로그램실',      addr:'부산광역시 연제구 쌍미천로52번길 2'},
-  {name:'연산제6동제4투', bld:'송원빌라 1층 주차장',                     addr:'부산광역시 연제구 연수로148번길 91'},
-  {name:'연산제6동제5투', bld:'연산더샵아파트 2층 스터디룸',             addr:'부산광역시 연제구 연수로 130'},
-  {name:'연산제8동제1투', bld:'연천초등학교 본관 1층 어울림터',          addr:'부산광역시 연제구 과정로225번길 46'},
-  {name:'연산제8동제2투', bld:'연일초등학교 1층 강당',                   addr:'부산광역시 연제구 고분로 126-4'},
-  {name:'연산제8동제3투', bld:'연산8동경로회관 1층',                     addr:'부산광역시 연제구 안연로7번가길 21'},
-  {name:'연산제8동제4투', bld:'더샵파크시티아파트 104동 1층 작은도서관', addr:'부산광역시 연제구 안연로 33'},
-  {name:'연산제9동제1투', bld:'한양아파트 경로당 1층',                   addr:'부산광역시 연제구 온천천남로 110'},
-  {name:'연산제9동제2투', bld:'부산광역시립연산도서관 1층 문화강좌실',   addr:'부산광역시 연제구 고분로191번길 16'},
-  {name:'연산제9동제3투', bld:'연제구노인복지관 3층 대강당',             addr:'부산광역시 연제구 고분로 188'},
-  {name:'연산제9동제4투', bld:'부산지방국세청 별관 1층 로비',            addr:'부산광역시 연제구 토곡로 20'},
-  {name:'연산제9동제5투', bld:'연산9동행정복지센터 3층 대회의실',        addr:'부산광역시 연제구 과정로164번길 38'},
-  {name:'연산제9동제6투', bld:'토현중학교 1층 미술실 복도',              addr:'부산광역시 연제구 토현로 47'},
-  {name:'연산제9동제7투', bld:'망미주공아파트 1층 경로당',               addr:'부산광역시 연제구 토현로 10'},
-  {name:'연산제9동제8투', bld:'선경아파트 103동 1층 주차장',             addr:'부산광역시 연제구 과정로 74'},
-  {name:'연산제9동제9투', bld:'센텀수영강푸르지오 1층 경로당',           addr:'부산광역시 연제구 고분로 270'},
+  {name:'거제제1동제1투',bld:'연제구 보훈회관 3층 다목적홀',addr:'부산광역시 연제구 명륜로2번길 9'},
+  {name:'거제제1동제2투',bld:'동래세무서 별관 1층 로비',addr:'부산광역시 연제구 거제천로269번길 16'},
+  {name:'거제제1동제3투',bld:'거학초등학교 1층 서편 현관',addr:'부산광역시 연제구 교대로24번길 36'},
+  {name:'거제제1동제4투',bld:'부산연제우체국 1층 홍보관',addr:'부산광역시 연제구 법원북로 33'},
+  {name:'거제제1동제5투',bld:'남문초등학교 1층 1-3반',addr:'부산광역시 연제구 법원북로 23'},
+  {name:'거제제1동제6투',bld:'거제1동행정복지센터 3층 다목적실',addr:'부산광역시 연제구 법원북로 88'},
+  {name:'거제제1동제7투',bld:'거제동월드메르디앙아파트 108동 지하1층',addr:'부산광역시 연제구 거제천로 233'},
+  {name:'거제제2동제1투',bld:'거제2동행정복지센터 3층 다목적홀',addr:'부산광역시 연제구 아시아드대로22번길 19'},
+  {name:'거제제2동제2투',bld:'창신초등학교 1층 현관로비',addr:'부산광역시 연제구 종합운동장로12번길 15'},
+  {name:'거제제2동제3투',bld:'거제종합사회복지관 3층 세미나실',addr:'부산광역시 연제구 아시아드대로46번길 45'},
+  {name:'거제제2동제4투',bld:'거제여자중학교 1층 정문로비',addr:'부산광역시 연제구 금용로 43'},
+  {name:'거제제2동제5투',bld:'레이카운티아파트 1단지 커뮤니티센터 P1층 입주민카페',addr:'부산광역시 연제구 아시아드대로 39',lat:35.18871,lng:129.06445},
+  {name:'거제제2동제6투',bld:'레이카운티아파트 2단지 커뮤니티센터 2층 입주민카페',addr:'부산광역시 연제구 아시아드대로 39',lat:35.18883,lng:129.06660},
+  {name:'거제제3동제1투',bld:'연제구 육아종합지원센터 4층 다목적강당',addr:'부산광역시 연제구 거제대로124번길 22'},
+  {name:'거제제3동제2투',bld:'거제3동행정복지센터 1층 평생학습실',addr:'부산광역시 연제구 거제대로 180'},
+  {name:'거제제3동제3투',bld:'나라키움 부산통합청사 2층 대강당',addr:'부산광역시 연제구 거제대로 222'},
+  {name:'거제제4동제1투',bld:'거제4동행정복지센터 4층 다목적강당',addr:'부산광역시 연제구 화지로52번길 33'},
+  {name:'거제제4동제2투',bld:'거성중학교 1층 학부모회실',addr:'부산광역시 연제구 해맞이로109번길 61'},
+  {name:'거제제4동제3투',bld:'거제건강생활지원센터 3층 다목적실',addr:'부산광역시 연제구 해맞이로 53'},
+  {name:'연산제1동제1투',bld:'연산1동행정복지센터 3층 대회의실',addr:'부산광역시 연제구 연동로8번길 66'},
+  {name:'연산제1동제2투',bld:'연서초등학교 1층 강당',addr:'부산광역시 연제구 거제천로270번길 30'},
+  {name:'연산제1동제3투',bld:'연산중학교 1층 학부모실',addr:'부산광역시 연제구 고분로56번길 39'},
+  {name:'연산제1동제4투',bld:'연산자이아파트 1층 입주자대표회의실',addr:'부산광역시 연제구 과정로343번길 43'},
+  {name:'연산제2동제1투',bld:'연산2동행정복지센터 2층 다목적강당',addr:'부산광역시 연제구 연제로42번길 46'},
+  {name:'연산제2동제2투',bld:'시청역비스타동원아파트 지하1층 작은도서관',addr:'부산광역시 연제구 연제로 30'},
+  {name:'연산제2동제3투',bld:'연제구청 2층 대회의실',addr:'부산광역시 연제구 연제로 2'},
+  {name:'연산제2동제4투',bld:'연제도서관 지하1층 다목적홀',addr:'부산광역시 연제구 황령산로 612'},
+  {name:'연산제2동제5투',bld:'연제롯데캐슬데시앙 커뮤니티센터',addr:'부산광역시 연제구 월드컵대로 55'},
+  {name:'연산제3동제1투',bld:'섬강스위트빌 1층 주차장',addr:'부산광역시 연제구 금련로 27'},
+  {name:'연산제3동제2투',bld:'연산3동행정복지센터 4층 대회의실',addr:'부산광역시 연제구 연수로208번길 16'},
+  {name:'연산제3동제3투',bld:'연산종합사회복지관 지하1층 경로식당',addr:'부산광역시 연제구 봉수로 17'},
+  {name:'연산제4동제1투',bld:'부산광역시 노인종합복지관 1층 로비',addr:'부산광역시 연제구 거제천로230번길 18'},
+  {name:'연산제4동제2투',bld:'연산4동행정복지센터 1층 민원실',addr:'부산광역시 연제구 쌍미천로151번길 42'},
+  {name:'연산제4동제3투',bld:'연산로터리새마을금고 4층 대강당',addr:'부산광역시 연제구 쌍미천로141번길 22'},
+  {name:'연산제4동제4투',bld:'한일태권도 1층 태권도장',addr:'부산광역시 연제구 쌍미천로 106'},
+  {name:'연산제4동제5투',bld:'연산SK뷰아파트 1단지 101동 1층 노인정',addr:'부산광역시 연제구 중앙대로1124번길 15'},
+  {name:'연산제5동제1투',bld:'연산5동행정복지센터 1층 민원실',addr:'부산광역시 연제구 거제천로124번길 15'},
+  {name:'연산제5동제2투',bld:'연제초등학교 1층 1-3반',addr:'부산광역시 연제구 중앙대로1065번길 14'},
+  {name:'연산제5동제3투',bld:'도시철도 연산역 지하1층 대합실',addr:'부산광역시 연제구 중앙대로 1101'},
+  {name:'연산제5동제4투',bld:'부산광역시청 1층 대회의실',addr:'부산광역시 연제구 중앙대로 1001'},
+  {name:'연산제6동제1투',bld:'(구)새화랑체육관 1층',addr:'부산광역시 연제구 대리로6번길 115-1'},
+  {name:'연산제6동제2투',bld:'부산연산동우체국 1층 주차장',addr:'부산광역시 연제구 연수로 197'},
+  {name:'연산제6동제3투',bld:'연산6동행정복지센터 4층 프로그램실',addr:'부산광역시 연제구 쌍미천로52번길 2'},
+  {name:'연산제6동제4투',bld:'송원빌라 1층 주차장',addr:'부산광역시 연제구 연수로148번길 91'},
+  {name:'연산제6동제5투',bld:'연산더샵아파트 2층 스터디룸',addr:'부산광역시 연제구 연수로 130'},
+  {name:'연산제8동제1투',bld:'연천초등학교 본관 1층 어울림터',addr:'부산광역시 연제구 과정로225번길 46'},
+  {name:'연산제8동제2투',bld:'연일초등학교 1층 강당',addr:'부산광역시 연제구 고분로 126-4'},
+  {name:'연산제8동제3투',bld:'연산8동경로회관 1층',addr:'부산광역시 연제구 안연로7번가길 21'},
+  {name:'연산제8동제4투',bld:'더샵파크시티아파트 104동 1층 작은도서관',addr:'부산광역시 연제구 안연로 33'},
+  {name:'연산제9동제1투',bld:'한양아파트 경로당 1층',addr:'부산광역시 연제구 온천천남로 110'},
+  {name:'연산제9동제2투',bld:'부산광역시립연산도서관 1층 문화강좌실',addr:'부산광역시 연제구 고분로191번길 16'},
+  {name:'연산제9동제3투',bld:'연제구노인복지관 3층 대강당',addr:'부산광역시 연제구 고분로 188'},
+  {name:'연산제9동제4투',bld:'부산지방국세청 별관 1층 로비',addr:'부산광역시 연제구 토곡로 20'},
+  {name:'연산제9동제5투',bld:'연산9동행정복지센터 3층 대회의실',addr:'부산광역시 연제구 과정로164번길 38'},
+  {name:'연산제9동제6투',bld:'토현중학교 1층 미술실 복도',addr:'부산광역시 연제구 토현로 47'},
+  {name:'연산제9동제7투',bld:'망미주공아파트 1층 경로당',addr:'부산광역시 연제구 토현로 10'},
+  {name:'연산제9동제8투',bld:'선경아파트 103동 1층 주차장',addr:'부산광역시 연제구 과정로 74'},
+  {name:'연산제9동제9투',bld:'센텀수영강푸르지오 1층 경로당',addr:'부산광역시 연제구 고분로 270'},
 ];
 
 function geocodeNaver(addr){
